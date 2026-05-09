@@ -1,0 +1,284 @@
+.ppCard {
+  max-width: 760px;
+  width: 100%;
+  margin: 12px auto;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ppCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.12);
+}
+
+/* HEADER */
+.ppHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #0b5cff 0%, #4aa3ff 55%, #bfe3ff 120%);
+  color: #071225;
+}
+
+.ppHeaderLeft {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  align-items: center;
+}
+
+.ppAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  flex: 0 0 auto;
+}
+
+.ppPlayerBlock {
+  min-width: 0;
+}
+
+.ppPlayerRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ppPlayerName {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #06122a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ppPosition {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(6, 18, 42, 0.7);
+}
+
+.ppRatingPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(6, 18, 42, 0.1);
+}
+
+.ppRatingStar {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.ppRatingNum {
+  line-height: 1;
+}
+
+.ppPropPill {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(6, 18, 42, 0.1);
+}
+
+.ppHeaderRight {
+  text-align: right;
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.ppMatchup {
+  font-weight: 900;
+  font-size: 13px;
+  color: #06122a;
+}
+
+.ppDate {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(6, 18, 42, 0.68);
+}
+
+/* SECTION */
+.ppSection {
+  margin: 14px 14px 0 14px;
+  padding: 12px;
+  background: #f4f7fb;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+}
+
+.ppSectionTitle {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.72);
+  margin-bottom: 10px;
+}
+
+/* Stats grid */
+.ppStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ppStatBox {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.ppStatBoxEmpty {
+  opacity: 0.6;
+}
+
+.ppStatLabel {
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.65);
+  margin-bottom: 6px;
+}
+
+.ppStatValue {
+  font-size: 16px;
+  font-weight: 900;
+  color: #0b1a37;
+}
+
+.ppStatSub {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+/* Odds row */
+.ppOdds {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  flex-wrap: wrap;
+}
+
+.ppOddsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.ppOddsBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(11, 92, 255, 0.35);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+}
+
+.ppOddsBtn:active {
+  transform: translateY(0px);
+}
+
+.ppBookLogo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.ppOddsVal {
+  font-size: 14px;
+  font-weight: 900;
+  color: #0b1a37;
+}
+
+/* Actions */
+.ppActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px 14px 14px;
+}
+
+.ppActionBtn {
+  flex: 1;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+.ppActionBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+}
+
+.ppActionBtn:active {
+  transform: translateY(0px);
+}
+
+.ppActionBtnSecondary {
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.ppActionBtnPrimary {
+  background: linear-gradient(135deg, #0b5cff 0%, #2f8dff 100%);
+  border-color: rgba(11, 92, 255, 0.35);
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .ppStatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ppHeaderRight {
+    text-align: left;
+  }
+}

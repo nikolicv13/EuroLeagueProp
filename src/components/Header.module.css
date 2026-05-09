@@ -1,0 +1,95 @@
+.siteHeader {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  transition: box-shadow 150ms ease;
+}
+
+.siteHeaderInner {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.headerSection {
+  flex: 1;
+  display: flex;
+}
+
+.headerLeft {
+  justify-content: flex-start;
+}
+
+.headerCenter {
+  justify-content: center;
+}
+
+.headerRight {
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 20px;
+  color: #111;
+  text-decoration: none;
+}
+
+/* Navigation Links */
+.nav {
+  display: flex;
+  gap: 32px;
+}
+
+.navLink {
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 150ms ease;
+}
+
+.navLinkActive {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.navLink:hover {
+  color: #111827;
+  background: #f9fafb;
+}
+
+/* Buttons */
+.button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 15px;
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+.buttonSecondary {
+  color: #374151;
+}
+
+.buttonSecondary:hover {
+  background: #f3f4f6;
+}
+
+.buttonPrimary {
+  background: #2563eb;
+  color: white;
+}
+
+.buttonPrimary:hover {
+  background: #1d4ed8;
+}

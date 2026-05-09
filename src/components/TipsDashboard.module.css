@@ -1,0 +1,65 @@
+.dashboardContainer {
+  display: flex;
+  height: 100vh;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+/* LEFT SIDEBAR */
+.sidebar {
+  width: 280px;
+  padding: 20px;
+  flex-shrink: 0;
+  background-color: #f5f5f5;
+  border-right: 1px solid #e0e0e0;
+}
+
+.sidebarTitle {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.sidebarSelect {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  background-color: #16213e;
+  color: white;
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.sidebarSelect option {
+  background: #16213e;
+  color: white;
+}
+
+.sidebarNoGames {
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* RIGHT MAIN AREA */
+.mainContent {
+  flex: 1;
+  padding: 20px 0px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+.mainTitle {
+  margin-top: 0;
+}
+
+/* TIPS LIST */
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  transform: translateX(-140px);
+}

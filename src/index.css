@@ -1,0 +1,62 @@
+/* Always put this first, order matters */
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+/* Base document styles */
+html {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  background-color: #fafafa;
+  color: #111827;
+}
+
+/* Global default overrides */
+button {
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* Remove default ugly link underline */
+a {
+  text-decoration: inherit;
+  color: inherit;
+}
+
+/* Make headings look normal by default */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+}
+
+/* Very optional nice to have */
+:root {
+  accent-color: #2563eb;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+}

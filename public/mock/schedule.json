@@ -1,0 +1,68 @@
+{
+  "season_code": "2025-26",
+  "phase": "RS",
+  "upcoming_dates": ["2026-04-29", "2026-04-30"],
+  "games": [
+    {
+      "game_id": 900101,
+      "date": "2026-04-29",
+      "time": "20:30",
+      "round": 33,
+      "team_id_a": 101,
+      "team_a": "OLY",
+      "team_id_b": 102,
+      "team_b": "BAR"
+    },
+    {
+      "game_id": 900102,
+      "date": "2026-04-29",
+      "time": "21:00",
+      "round": 33,
+      "team_id_a": 103,
+      "team_a": "PAN",
+      "team_id_b": 104,
+      "team_b": "RMB"
+    },
+    {
+      "game_id": 900103,
+      "date": "2026-04-29",
+      "time": "19:45",
+      "round": 33,
+      "team_id_a": 105,
+      "team_a": "FEN",
+      "team_id_b": 106,
+      "team_b": "MIL"
+    },
+
+    {
+      "game_id": 900201,
+      "date": "2026-04-30",
+      "time": "20:00",
+      "round": 33,
+      "team_id_a": 107,
+      "team_a": "MON",
+      "team_id_b": 108,
+      "team_b": "BAY"
+    },
+    {
+      "game_id": 900202,
+      "date": "2026-04-30",
+      "time": "20:15",
+      "round": 33,
+      "team_id_a": 109,
+      "team_a": "MAC",
+      "team_id_b": 110,
+      "team_b": "ZAL"
+    },
+    {
+      "game_id": 900203,
+      "date": "2026-04-30",
+      "time": "21:05",
+      "round": 33,
+      "team_id_a": 111,
+      "team_a": "EFE",
+      "team_id_b": 112,
+      "team_b": "VIR"
+    }
+  ]
+}
