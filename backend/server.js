@@ -74,11 +74,14 @@ app.get("/api/players/:id/stats", async (req, res) => {
   try {
     const playerId = req.params.id;
     const limit = req.query.limit || 10;
-    const opponent = req.query.opponent; // optional: team_id for H2H
+    const opponent = req.query.opponent;
+    const seasonCode = req.query.season; // <-- ADD THIS
+    const gameDate = req.query.date; // <-- ADD THIS
 
     let query = `
       SELECT 
         bs.game_id,
+        bs.team_id, 
         bs.points,
         bs.total_rebounds,
         bs.assists,
@@ -99,14 +102,29 @@ app.get("/api/players/:id/stats", async (req, res) => {
       AND bs.minutes != 'DNP'`;
 
     const params = [playerId];
+    let paramIndex = 2;
 
-    // If opponent is provided, filter for H2H games
-    if (opponent) {
-      query += ` AND (g.team_id_a = $2 OR g.team_id_b = $2)`;
-      params.push(opponent);
+    // Add season filter if provided
+    if (seasonCode) {
+      query += ` AND g.season_code = $${paramIndex}`;
+      params.push(seasonCode);
+      paramIndex++;
     }
 
-    query += ` ORDER BY g.date DESC LIMIT $${params.length + 1}`;
+    // Add date filter if provided (only games BEFORE this date)
+    if (gameDate) {
+      query += ` AND g.date <= $${paramIndex}`;
+      params.push(gameDate);
+      paramIndex++;
+    }
+
+    if (opponent) {
+      query += ` AND (g.team_id_a = $${paramIndex} OR g.team_id_b = $${paramIndex})`;
+      params.push(opponent);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY g.date DESC LIMIT $${paramIndex}`;
     params.push(limit);
 
     const result = await pool.query(query, params);
@@ -167,7 +185,7 @@ app.get("/api/tips/:gameId", async (req, res) => {
   const { gameId } = req.params;
 
   try {
-    // 1. Get the game details (who is playing?)
+    // 1. Get the game details
     const gameRes = await pool.query(
       `SELECT game_id, date, time, team_id_a, team_id_b, team_a, team_b, season_code FROM games WHERE game_id = $1`,
       [gameId],
@@ -184,12 +202,14 @@ app.get("/api/tips/:gameId", async (req, res) => {
         ps.three_points_made_per_game, ps.minutes_per_game
       FROM players p
       JOIN player_season_stats ps ON p.player_id = ps.player_id
-      WHERE ps.team_id IN ($1, $2)  
+      WHERE ps.team_id IN ($1, $2)
       AND ps.season_code = $3`,
       [game.team_id_a, game.team_id_b, game.season_code],
     );
 
-    // 3. Get all box scores for these players this season (to calculate hit rates)
+    const allPlayerIds = playersRes.rows.map((p) => p.player_id);
+
+    // 3. Get box scores for THIS season (for L5, L10, L15)
     const boxScoresRes = await pool.query(
       `SELECT 
         bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
@@ -197,31 +217,30 @@ app.get("/api/tips/:gameId", async (req, res) => {
       FROM box_scores bs
       JOIN games g ON bs.game_id = g.game_id
       WHERE bs.player_id = ANY($1) 
-        AND g.season_code = $2  
+        AND g.season_code = $2
         AND g.date <= $3
       ORDER BY g.date DESC`,
-      [playersRes.rows.map((p) => p.player_id), game.season_code, game.date],
+      [allPlayerIds, game.season_code, game.date],
     );
 
-    // Group box scores by player for easy lookup
+    // Group season box scores by player
     const playerGames = {};
     for (const bs of boxScoresRes.rows) {
       if (!playerGames[bs.player_id]) playerGames[bs.player_id] = [];
       playerGames[bs.player_id].push(bs);
     }
 
-    // 4. Build the Tips (The "Engine")
+    // 4. Build the Tips
     const tips = [];
 
     for (const p of playersRes.rows) {
       const games = playerGames[p.player_id] || [];
-      if (games.length === 0) continue; // Skip if no data
+      if (games.length === 0) continue;
 
       const isTeamA = p.team_id === game.team_id_a;
       const opponentTeamId = isTeamA ? game.team_id_b : game.team_id_a;
       const opponentTeamName = isTeamA ? game.team_b : game.team_a;
 
-      // Markets we want to generate tips for
       const markets = [
         { market: "points", avg: p.points_per_game, key: "points" },
         { market: "assists", avg: p.assists_per_game, key: "assists" },
@@ -239,20 +258,19 @@ app.get("/api/tips/:gameId", async (req, res) => {
 
       for (const m of markets) {
         const avg = parseFloat(m.avg) || 0;
-        if (avg < 1) continue; // Skip players who barely score/assist/rebound
+        if (avg < 1) continue;
 
-        // Generate the line (e.g., if averaging 12.4 pts, line is 11.5)
         const line = Math.floor(avg) + 0.5;
 
-        // Helper to calculate hit rate
         const calcHitRate = (gameList) => {
           if (gameList.length === 0) return { hits: 0, attempts: 0, rate: 0 };
           let hits = 0;
           let attempts = 0;
           for (const g of gameList) {
-            if (g.minutes === "DNP") continue; // Skip games they didn't play
+            if (g.minutes === "DNP") continue;
             attempts++;
-            if (parseFloat(g[m.key]) > line) hits++;
+            const value = parseFloat(g[m.key]) || 0;
+            if (value > line) hits++;
           }
           return { hits, attempts, rate: attempts > 0 ? hits / attempts : 0 };
         };
@@ -262,16 +280,24 @@ app.get("/api/tips/:gameId", async (req, res) => {
         const last10HR = calcHitRate(games.slice(0, 10));
         const last15HR = calcHitRate(games.slice(0, 15));
 
-        // Vs Opponent filter
-        const vsOppGames = games.filter(
-          (g) =>
-            g.team_id_a === opponentTeamId || g.team_id_b === opponentTeamId,
+        // Use the pre-fetched H2H games for this specific player
+        const h2hRes = await pool.query(
+          `SELECT 
+            bs.points, bs.assists, bs.total_rebounds, 
+            bs.three_points_made, bs.minutes, g.date
+          FROM box_scores bs
+          JOIN games g ON bs.game_id = g.game_id
+          WHERE bs.player_id = $1
+            AND bs.minutes != 'DNP'
+            AND bs.team_id != $2  -- Player was NOT on the opponent team
+            AND (g.team_id_a = $2 OR g.team_id_b = $2)  -- Opponent was in this game
+          ORDER BY g.date DESC`,
+          [p.player_id, opponentTeamId],
         );
-        const vsOppHR = calcHitRate(vsOppGames);
+        const h2hGames = h2hRes.rows;
+        const vsOppHR = calcHitRate(h2hGames);
 
-        // Calculate Score (0-100 rating)
-        // Formula: (Last 5 hit rate * 60) + (Minutes per game weight * 40)
-        const minutesWeight = Math.min(parseFloat(p.minutes_per_game) / 30, 1); // Max out at 30 mins
+        const minutesWeight = Math.min(parseFloat(p.minutes_per_game) / 30, 1);
         const score = Math.round(last5HR.rate * 60 + minutesWeight * 40);
 
         tips.push({
@@ -288,22 +314,29 @@ app.get("/api/tips/:gameId", async (req, res) => {
           opponent_abbr: opponentTeamId,
           position: p.position,
           market: m.market,
-          selection: "over", // For now, we only suggest "Over"
+          selection: "over",
           line: line,
-          odds: 1.9, // Placeholder odds (e.g., -110)
+          odds: 1.9,
           hit_rates: {
             season: seasonHR,
             last5: last5HR,
             last10: last10HR,
             last15: last15HR,
-            vs_opp: vsOppHR,
+            vs_opp: {
+              ...vsOppHR,
+              // Attach the actual all-time games here so your graph can use them!
+              games: h2hGames.map((g) => ({
+                date: g.date,
+                value: parseFloat(g[m.key]) || 0,
+                minutes: g.minutes,
+              })),
+            },
           },
           score: score,
         });
       }
     }
 
-    // 5. Sort by score (highest first)
     tips.sort((a, b) => b.score - a.score);
 
     res.json(tips);
@@ -314,7 +347,6 @@ app.get("/api/tips/:gameId", async (req, res) => {
       .json({ error: "Failed to generate tips", details: error.message });
   }
 });
-
 // ==========================================
 // START THE SERVER
 // ==========================================

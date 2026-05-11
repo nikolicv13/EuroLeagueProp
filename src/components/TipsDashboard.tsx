@@ -10,7 +10,7 @@ export default function TipsDashboard() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const testDate = "2026-01-09";
+  const testDate = "2026-04-10";
 
   useEffect(() => {
     async function loadGames() {

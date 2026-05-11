@@ -48,6 +48,7 @@ export interface Tip {
 
 export interface PlayerGameStat {
   game_id: string;
+  team_id?: string;
   points: number;
   total_rebounds: number;
   assists: number;
@@ -90,9 +91,13 @@ export async function fetchPlayerStats(
   playerId: string,
   limit: number,
   opponent?: string,
+  season?: string, // <-- ADD
+  date?: string, // <-- ADD
 ): Promise<PlayerGameStat[]> {
   let url = `${API_URL}/players/${playerId}/stats?limit=${limit}`;
   if (opponent) url += `&opponent=${opponent}`;
+  if (season) url += `&season=${season}`;
+  if (date) url += `&date=${date}`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch player stats");

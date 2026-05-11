@@ -138,6 +138,8 @@ export default function PlayerStats() {
     opponent_team_id: string;
     opponent: string;
     team_id: string;
+    game_id: string; // <-- ADD
+    start_time: string;
     hit_rates?: {
       season: { hits: number; attempts: number; rate: number };
       last5: { hits: number; attempts: number; rate: number };
@@ -171,7 +173,8 @@ export default function PlayerStats() {
       const reversed = data.reverse();
 
       const formatted = reversed.map((game) => {
-        const isTeamA = game.team_id_a === tip.team_id;
+        const playerTeamId = game.team_id || tip.team_id;
+        const isTeamA = game.team_id_a === playerTeamId;
         const opponentId = isTeamA ? game.team_id_b : game.team_id_a;
 
         return {
@@ -239,8 +242,8 @@ export default function PlayerStats() {
     const sel = tip.selection || "over"; // Fallback to "over"
     if (sel === "over") {
       return value > tip.line ? "#4caf50" : "#e94560";
-      return value < tip.line ? "#4caf50" : "#e94560";
     }
+    return value < tip.line ? "#4caf50" : "#e94560";
   };
 
   return (
