@@ -104,8 +104,11 @@ export interface PlayerGameStat {
 }
 export interface DefenseStatRank {
   avg: number;
-  rank: number;
-  label: "Strong" | "Average" | "Weak";
+  rank: number | null;
+  label: string;
+  season_avg?: number; // Added
+  trend?: string; // Added: e.g., "+3.5" or "-2.1"
+  trend_direction?: string; // Added: "worse", "better", "same"
 }
 
 export interface DefenseRankings {
@@ -164,8 +167,9 @@ export async function fetchPlayerStats(
 export async function fetchDefenseRankings(
   teamId: string,
   position: string,
+  limit: string = "season",
 ): Promise<DefenseRankings> {
-  const url = `${API_URL}/defense/${teamId}/${position}`;
+  const url = `${API_URL}/defense/${teamId}/${position}?limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch defense rankings");
   return res.json();

@@ -5,6 +5,7 @@ import type {
   PlayerGameStat,
   CustomXTickProps,
   DefenseRankings,
+  DefenseStatRank,
 } from "../api/api";
 import {
   BarChart,
@@ -55,47 +56,84 @@ function DefenseBox({
   label,
   stat,
   isActive,
+  showRank,
 }: {
   label: string;
-  stat: { avg: number; rank: number; label: string };
+  stat: DefenseStatRank;
   isActive: boolean;
+  showRank: boolean;
 }) {
   const getColor = (defLabel: string) => {
-    if (defLabel === "Weak") return "#4caf50"; // Green = Bad defense = Easy to score
-    if (defLabel === "Strong") return "#e94560"; // Red = Good defense = Hard to score
-    return "#888888"; // Gray = Average
+    if (defLabel === "Weak") return "#4caf50";
+    if (defLabel === "Strong") return "#e94560";
+    return "#ffc658";
+  };
+
+  const getTrendColor = (direction?: string) => {
+    if (direction === "worse") return "#4caf50"; // Green -> Defense is weaker, easier to hit OVER
+    if (direction === "better") return "#e94560"; // Red -> Defense is stronger, harder to hit OVER
+    return "#888"; // Grey -> About the same
   };
 
   const color = getColor(stat.label);
+  const trendColor = getTrendColor(stat.trend_direction);
 
   return (
     <div
       style={{
         textAlign: "center",
-        padding: "12px 8px",
+        padding: "12px 20px",
         borderRadius: "8px",
         background: isActive ? "#f0f0f0" : "transparent",
-        border: isActive ? "2px solid #333" : "1px solid #e0e0e0",
+        border: isActive ? "2px solid #333" : "2px solid transparent",
         minWidth: "80px",
       }}
     >
       <div
         style={{
-          fontSize: "12px",
+          fontSize: "14px",
           fontWeight: "bold",
-          color: "#888",
-          marginBottom: "4px",
+          color: "#666",
+          marginBottom: "5px",
         }}
       >
         {label}
       </div>
-      <div style={{ fontSize: "20px", fontWeight: "bold", color: color }}>
+      <div style={{ fontSize: "18px", fontWeight: "bold", color: "#333" }}>
         {stat.avg}
       </div>
-      <div style={{ fontSize: "11px", color: color, marginTop: "2px" }}>
-        {stat.rank}
-        {getOrdinal(stat.rank)}
-      </div>
+
+      {/* Show Rank if available (always from season) */}
+      {showRank && stat.rank && (
+        <div
+          style={{
+            fontSize: "11px",
+            color: color,
+            fontWeight: "bold",
+            marginTop: "4px",
+          }}
+        >
+          {stat.rank}
+          {getOrdinal(stat.rank)}
+        </div>
+      )}
+
+      {/* Show Trend if available (L5 / L10) */}
+      {stat.trend && stat.trend !== "0.0" && (
+        <div
+          style={{
+            fontSize: "11px",
+            color: trendColor,
+            fontWeight: "bold",
+            marginTop: "4px",
+          }}
+        >
+          {stat.trend} vs S
+          <span style={{ fontSize: "9px", marginLeft: "2px", opacity: 0.8 }}>
+            (Avg: {stat.season_avg})
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,7 +253,7 @@ export default function PlayerStats() {
     "minutes",
   );
   const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
-
+  const [defenseLimit, setDefenseLimit] = useState<string>("season");
   useEffect(() => {
     if (!tip?.player_id) return;
 
@@ -262,6 +300,7 @@ export default function PlayerStats() {
         const data = await fetchDefenseRankings(
           tip.opponent_team_id,
           tip.position || "PG",
+          defenseLimit,
         );
         setDefenseData(data); // Changed from setDefenseRankings
       } catch (err) {
@@ -270,7 +309,7 @@ export default function PlayerStats() {
     }
 
     loadDefense();
-  }, [tip]);
+  }, [tip, defenseLimit]);
   if (!tip) {
     return (
       <div className={styles.noData}>
@@ -506,6 +545,27 @@ export default function PlayerStats() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {/* Defense Filter Buttons */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        {["5", "10", "season"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setDefenseLimit(f)}
+            style={{
+              padding: "6px 14px",
+              background: defenseLimit === f ? "#0f3460" : "#e0e0e0",
+              color: defenseLimit === f ? "white" : "black",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "13px",
+            }}
+          >
+            {f === "season" ? "Season" : `Last ${f}`}
+          </button>
+        ))}
+      </div>
       {/* OPPONENT DEFENSE RANKINGS */}
       {defenseData && defenseData.stats && (
         <div className={styles.defenseContainer}>
@@ -526,16 +586,19 @@ export default function PlayerStats() {
               label="PTS"
               stat={defenseData.stats.points}
               isActive={tip.market === "points"}
+              showRank={defenseLimit === "season"}
             />
             <DefenseBox
               label="REB"
               stat={defenseData.stats.rebounds}
               isActive={tip.market === "rebounds"}
+              showRank={defenseLimit === "season"}
             />
             <DefenseBox
               label="AST"
               stat={defenseData.stats.assists}
               isActive={tip.market === "assists"}
+              showRank={defenseLimit === "season"}
             />
           </div>
 
@@ -551,16 +614,19 @@ export default function PlayerStats() {
               label="3PT"
               stat={defenseData.stats.threes}
               isActive={tip.market === "threes_made"}
+              showRank={defenseLimit === "season"}
             />
             <DefenseBox
               label="STL"
               stat={defenseData.stats.steals}
               isActive={false}
+              showRank={defenseLimit === "season"}
             />
             <DefenseBox
               label="BLK"
               stat={defenseData.stats.blocks}
               isActive={false}
+              showRank={defenseLimit === "season"}
             />
           </div>
 
