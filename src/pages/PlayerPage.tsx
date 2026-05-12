@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { fetchPlayerStats } from "../api/api";
-import type { PlayerGameStat, CustomXTickProps } from "../api/api";
+import { fetchDefenseRankings, fetchPlayerStats } from "../api/api";
+import type {
+  PlayerGameStat,
+  CustomXTickProps,
+  DefenseRankings,
+} from "../api/api";
 import {
   BarChart,
   Bar,
@@ -47,7 +51,60 @@ const CustomXTick = ({ x, y, payload }: CustomXTickProps) => {
     </g>
   );
 };
+function DefenseBox({
+  label,
+  stat,
+  isActive,
+}: {
+  label: string;
+  stat: { avg: number; rank: number; label: string };
+  isActive: boolean;
+}) {
+  const getColor = (defLabel: string) => {
+    if (defLabel === "Weak") return "#4caf50"; // Green = Bad defense = Easy to score
+    if (defLabel === "Strong") return "#e94560"; // Red = Good defense = Hard to score
+    return "#888888"; // Gray = Average
+  };
 
+  const color = getColor(stat.label);
+
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "12px 8px",
+        borderRadius: "8px",
+        background: isActive ? "#f0f0f0" : "transparent",
+        border: isActive ? "2px solid #333" : "1px solid #e0e0e0",
+        minWidth: "80px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "12px",
+          fontWeight: "bold",
+          color: "#888",
+          marginBottom: "4px",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: "20px", fontWeight: "bold", color: color }}>
+        {stat.avg}
+      </div>
+      <div style={{ fontSize: "11px", color: color, marginTop: "2px" }}>
+        {stat.rank}
+        {getOrdinal(stat.rank)}
+      </div>
+    </div>
+  );
+}
+
+function getOrdinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
 // Format date to "Mar 13"
 function formatDate(dateStr: string) {
   if (!dateStr) return "";
@@ -132,6 +189,7 @@ export default function PlayerStats() {
   const tip = location.state as {
     player_id: string;
     player: string;
+    position: string;
     market: string;
     line: number;
     selection: "over" | "under";
@@ -156,6 +214,7 @@ export default function PlayerStats() {
   const [activeMetric, setActiveMetric] = useState<"minutes" | "fga" | "3pta">(
     "minutes",
   );
+  const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
 
   useEffect(() => {
     if (!tip?.player_id) return;
@@ -195,7 +254,23 @@ export default function PlayerStats() {
 
     loadStats();
   }, [activeFilter, tip]);
+  useEffect(() => {
+    if (!tip?.opponent_team_id || !tip?.position || !tip?.market) return;
 
+    async function loadDefense() {
+      try {
+        const data = await fetchDefenseRankings(
+          tip.opponent_team_id,
+          tip.position || "PG",
+        );
+        setDefenseData(data); // Changed from setDefenseRankings
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadDefense();
+  }, [tip]);
   if (!tip) {
     return (
       <div className={styles.noData}>
@@ -425,12 +500,122 @@ export default function PlayerStats() {
                   fill: "#333333",
                   fontSize: 14,
                   fontWeight: "bold",
-                }} // <-- Changed to center/dark (yellow is too light for white)
+                }}
               />
             )}
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {/* OPPONENT DEFENSE RANKINGS */}
+      {defenseData && defenseData.stats && (
+        <div className={styles.defenseContainer}>
+          <h3 className={styles.defenseTitle}>
+            {tip.opponent} Defense vs {tip.position || "All"} Position
+          </h3>
+
+          {/* TOP ROW: PTS, REB, AST */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-around",
+              marginBottom: "10px",
+              gap: "10px",
+            }}
+          >
+            <DefenseBox
+              label="PTS"
+              stat={defenseData.stats.points}
+              isActive={tip.market === "points"}
+            />
+            <DefenseBox
+              label="REB"
+              stat={defenseData.stats.rebounds}
+              isActive={tip.market === "rebounds"}
+            />
+            <DefenseBox
+              label="AST"
+              stat={defenseData.stats.assists}
+              isActive={tip.market === "assists"}
+            />
+          </div>
+
+          {/* BOTTOM ROW: 3PT, STL, BLK */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-around",
+              gap: "10px",
+            }}
+          >
+            <DefenseBox
+              label="3PT"
+              stat={defenseData.stats.threes}
+              isActive={tip.market === "threes_made"}
+            />
+            <DefenseBox
+              label="STL"
+              stat={defenseData.stats.steals}
+              isActive={false}
+            />
+            <DefenseBox
+              label="BLK"
+              stat={defenseData.stats.blocks}
+              isActive={false}
+            />
+          </div>
+
+          {/* LEGEND */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "20px",
+              marginTop: "20px",
+              padding: "10px",
+              background: "#f9f9f9",
+              borderRadius: "8px",
+              fontSize: "12px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  background: "#4caf50",
+                  borderRadius: "3px",
+                  display: "inline-block",
+                }}
+              ></span>
+              <span>Weak = Green (Bad defense, easier to score)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  background: "#e94560",
+                  borderRadius: "3px",
+                  display: "inline-block",
+                }}
+              ></span>
+              <span>Strong = Red (Good defense, harder to score)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  background: "#888888",
+                  borderRadius: "3px",
+                  display: "inline-block",
+                }}
+              ></span>
+              <span>Average = Gray</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

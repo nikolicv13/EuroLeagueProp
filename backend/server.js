@@ -347,6 +347,178 @@ app.get("/api/tips/:gameId", async (req, res) => {
       .json({ error: "Failed to generate tips", details: error.message });
   }
 });
+
+// ==========================================
+// ROUTE 6: Opponent Defense vs Position
+// ==========================================
+// Usage: /api/teams/ASV/defense-vs-position/PG?season=E2024&date=2024-01-10
+app.get(
+  "/api/teams/:teamId/defense-vs-position/:position",
+  async (req, res) => {
+    try {
+      const { teamId, position } = req.params;
+      const season = req.query.season;
+      const date = req.query.date;
+
+      if (!season || !date) {
+        return res.status(400).json({ error: "Season and date are required" });
+      }
+
+      // Get all box scores of players with this position who played AGAINST this team
+      const result = await pool.query(
+        `SELECT 
+        bs.points, bs.total_rebounds, bs.assists, 
+        bs.three_points_made, bs.steals, bs.blocks_favour, 
+        g.date
+      FROM box_scores bs
+      JOIN games g ON bs.game_id = g.game_id
+      JOIN players p ON bs.player_id = p.player_id
+      WHERE (g.team_id_a = $1 OR g.team_id_b = $1) -- Opponent is in this game
+        AND bs.team_id != $1                       -- Player is NOT on the opponent team
+        AND p.position = $2                        -- Player plays the specified position
+        AND bs.minutes != 'DNP'                    -- Player actually played
+        AND g.season_code = $3                     -- Current season
+        AND g.date <= $4                           -- Before the selected game
+      ORDER BY g.date DESC`,
+        [teamId, position, season, date],
+      );
+
+      const games = result.rows;
+
+      if (games.length === 0) {
+        return res.json({
+          season: null,
+          last5: null,
+          last10: null,
+          last15: null,
+        });
+      }
+
+      // Helper to calculate averages
+      const calcAverages = (gameList) => {
+        if (gameList.length === 0) return null;
+        const totals = {
+          points: 0,
+          total_rebounds: 0,
+          assists: 0,
+          three_points_made: 0,
+          steals: 0,
+          blocks_favour: 0,
+        };
+        gameList.forEach((g) => {
+          totals.points += parseFloat(g.points) || 0;
+          totals.total_rebounds += parseFloat(g.total_rebounds) || 0;
+          totals.assists += parseFloat(g.assists) || 0;
+          totals.three_points_made += parseFloat(g.three_points_made) || 0;
+          totals.steals += parseFloat(g.steals) || 0;
+          totals.blocks_favour += parseFloat(g.blocks_favour) || 0;
+        });
+        const n = gameList.length;
+        return {
+          points: (totals.points / n).toFixed(1),
+          rebounds: (totals.total_rebounds / n).toFixed(1),
+          assists: (totals.assists / n).toFixed(1),
+          threes: (totals.three_points_made / n).toFixed(1),
+          steals: (totals.steals / n).toFixed(1),
+          blocks: (totals.blocks_favour / n).toFixed(1),
+          sample_size: n,
+        };
+      };
+
+      res.json({
+        season: calcAverages(games),
+        last15: calcAverages(games.slice(0, 15)),
+        last10: calcAverages(games.slice(0, 10)),
+        last5: calcAverages(games.slice(0, 5)),
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: "Failed to fetch defense stats",
+        details: error.message,
+      });
+    }
+  },
+);
+
+// ==========================================
+// ROUTE 6: Opponent Defense Rankings vs Position
+// ==========================================
+app.get("/api/defense/:teamId/:position", async (req, res) => {
+  try {
+    const { teamId, position } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM defense_rankings 
+       WHERE team_id = $1 AND position = $2`,
+      [teamId, position],
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        team_id: teamId,
+        position: position,
+        message: "No data available",
+        stats: null,
+      });
+    }
+
+    const row = result.rows[0];
+
+    res.json({
+      team_id: row.team_id,
+      position: row.position,
+      total_teams: row.total_teams_in_position,
+      stats: {
+        points: {
+          avg: row.avg_points,
+          rank: row.points_rank,
+          label: getDefenseLabel(row.points_rank, row.total_teams_in_position),
+        },
+        rebounds: {
+          avg: row.avg_rebounds,
+          rank: row.rebounds_rank,
+          label: getDefenseLabel(
+            row.rebounds_rank,
+            row.total_teams_in_position,
+          ),
+        },
+        assists: {
+          avg: row.avg_assists,
+          rank: row.assists_rank,
+          label: getDefenseLabel(row.assists_rank, row.total_teams_in_position),
+        },
+        threes: {
+          avg: row.avg_threes,
+          rank: row.threes_rank,
+          label: getDefenseLabel(row.threes_rank, row.total_teams_in_position),
+        },
+        steals: {
+          avg: row.avg_steals,
+          rank: row.steals_rank,
+          label: getDefenseLabel(row.steals_rank, row.total_teams_in_position),
+        },
+        blocks: {
+          avg: row.avg_blocks,
+          rank: row.blocks_rank,
+          label: getDefenseLabel(row.blocks_rank, row.total_teams_in_position),
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to fetch defense rankings",
+      details: error.message,
+    });
+  }
+});
+
+function getDefenseLabel(rank, totalTeams) {
+  const percentage = (rank / totalTeams) * 100;
+  if (percentage <= 25) return "Strong"; // Top 25% = Best defense
+  if (percentage >= 75) return "Weak"; // Bottom 25% = Worst defense
+  return "Average";
+}
+
 // ==========================================
 // START THE SERVER
 // ==========================================

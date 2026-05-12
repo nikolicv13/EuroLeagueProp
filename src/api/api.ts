@@ -18,6 +18,44 @@ export interface HitRate {
   attempts: number;
   rate: number;
 }
+export interface DefenseVsPosition {
+  season: {
+    points: string;
+    rebounds: string;
+    assists: string;
+    threes: string;
+    steals: string;
+    blocks: string;
+    sample_size: number;
+  } | null;
+  last5: {
+    points: string;
+    rebounds: string;
+    assists: string;
+    threes: string;
+    steals: string;
+    blocks: string;
+    sample_size: number;
+  } | null;
+  last10: {
+    points: string;
+    rebounds: string;
+    assists: string;
+    threes: string;
+    steals: string;
+    blocks: string;
+    sample_size: number;
+  } | null;
+  last15: {
+    points: string;
+    rebounds: string;
+    assists: string;
+    threes: string;
+    steals: string;
+    blocks: string;
+    sample_size: number;
+  } | null;
+}
 
 export interface Tip {
   id: string;
@@ -64,6 +102,25 @@ export interface PlayerGameStat {
   score_a: number | null;
   score_b: number | null;
 }
+export interface DefenseStatRank {
+  avg: number;
+  rank: number;
+  label: "Strong" | "Average" | "Weak";
+}
+
+export interface DefenseRankings {
+  team_id: string;
+  position: string;
+  total_teams: number;
+  stats: {
+    points: DefenseStatRank;
+    rebounds: DefenseStatRank;
+    assists: DefenseStatRank;
+    threes: DefenseStatRank;
+    steals: DefenseStatRank;
+    blocks: DefenseStatRank;
+  };
+}
 
 export interface CustomXTickProps {
   x?: number;
@@ -91,8 +148,8 @@ export async function fetchPlayerStats(
   playerId: string,
   limit: number,
   opponent?: string,
-  season?: string, // <-- ADD
-  date?: string, // <-- ADD
+  season?: string,
+  date?: string,
 ): Promise<PlayerGameStat[]> {
   let url = `${API_URL}/players/${playerId}/stats?limit=${limit}`;
   if (opponent) url += `&opponent=${opponent}`;
@@ -101,5 +158,15 @@ export async function fetchPlayerStats(
 
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch player stats");
+  return res.json();
+}
+
+export async function fetchDefenseRankings(
+  teamId: string,
+  position: string,
+): Promise<DefenseRankings> {
+  const url = `${API_URL}/defense/${teamId}/${position}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch defense rankings");
   return res.json();
 }
