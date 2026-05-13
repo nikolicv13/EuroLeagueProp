@@ -582,6 +582,31 @@ function getDefenseLabel(rank, totalTeams) {
   if (percentage >= 75) return "Weak";
   return "Average";
 }
+
+// ==========================================
+// ROUTE 7: Get Player Info
+// ==========================================
+app.get("/api/players/:id/info", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT player_id, player_name, position, team_id 
+       FROM players 
+       WHERE player_id = $1`,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to fetch player info", details: error.message });
+  }
+});
 // ==========================================
 // START THE SERVER
 // ==========================================

@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { fetchDefenseRankings, fetchPlayerStats } from "../api/api";
 import type {
   PlayerGameStat,
@@ -25,7 +30,19 @@ function parseMinutes(minStr: string): number {
 
   return parseFloat(minStr.replace(":", "."));
 }
+function calculateHitRate(values: number[], line: number) {
+  if (values.length === 0) return { hits: 0, attempts: 0, rate: 0 };
 
+  let hits = 0;
+  let attempts = 0;
+
+  for (const value of values) {
+    attempts++;
+    if (value > line) hits++;
+  }
+
+  return { hits, attempts, rate: attempts > 0 ? hits / attempts : 0 };
+}
 const CustomXTick = ({ x, y, payload }: CustomXTickProps) => {
   if (x === undefined || y === undefined || !payload?.value) return null;
 
@@ -224,27 +241,44 @@ export default function PlayerStats() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const tip = location.state as {
-    player_id: string;
-    player: string;
-    position: string;
-    market: string;
-    line: number;
-    selection: "over" | "under";
-    opponent_team_id: string;
-    opponent: string;
-    team_id: string;
-    game_id: string; // <-- ADD
-    start_time: string;
-    hit_rates?: {
-      season: { hits: number; attempts: number; rate: number };
-      last5: { hits: number; attempts: number; rate: number };
-      last10: { hits: number; attempts: number; rate: number };
-      last15: { hits: number; attempts: number; rate: number };
-      vs_opp?: { hits: number; attempts: number; rate: number };
-    };
-  };
+  const { playerId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const [savedState] = useState(
+    location.state as {
+      player_id: string;
+      player: string;
+      position: string;
+      market: string;
+      line: number;
+      selection: "over" | "under";
+      opponent_team_id: string;
+      opponent: string;
+      team_id: string;
+      game_id: string;
+      start_time: string;
+      hit_rates?: {
+        season: { hits: number; attempts: number; rate: number };
+        last5: { hits: number; attempts: number; rate: number };
+        last10: { hits: number; attempts: number; rate: number };
+        last15: { hits: number; attempts: number; rate: number };
+        vs_opp?: { hits: number; attempts: number; rate: number };
+      };
+    } | null,
+  );
+
+  // 2. Merge URL params with SAVED State (URL wins for prop/line/overUnder)
+  const tip = {
+    ...savedState,
+    player_id: playerId || savedState?.player_id || "",
+    market: searchParams.get("propType") || savedState?.market || "points",
+    line: parseFloat(
+      searchParams.get("propAmount") || String(savedState?.line || "10.5"),
+    ),
+    selection: (searchParams.get("overUnder") ||
+      savedState?.selection ||
+      "over") as "over" | "under",
+  };
   const [stats, setStats] = useState<PlayerGameStat[]>([]);
   const [activeFilter, setActiveFilter] = useState<"5" | "10" | "15" | "h2h">(
     "10",
@@ -254,15 +288,28 @@ export default function PlayerStats() {
   );
   const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
   const [defenseLimit, setDefenseLimit] = useState<string>("season");
+  const [inputMarket, setInputMarket] = useState(tip.market);
+  const [inputLine, setInputLine] = useState(tip.line);
+  const [inputOverUnder, setInputOverUnder] = useState(tip.selection);
+
+  const handleSearch = () => {
+    setSearchParams({
+      propType: inputMarket,
+      propAmount: String(isNaN(inputLine) ? tip.line : inputLine),
+      overUnder: inputOverUnder,
+    });
+    setActiveFilter("10"); // Reset graph to L10 for the new search
+  };
+
   useEffect(() => {
-    if (!tip?.player_id) return;
+    if (!tip.player_id) return;
 
     async function loadStats() {
-      let limit = parseInt(activeFilter);
+      let limit = 38; // ✅ Always fetch up to 50 games (full season)
       let opponent = undefined;
 
       if (activeFilter === "h2h") {
-        limit = 15;
+        limit = 20;
         opponent = tip.opponent_team_id;
       }
 
@@ -291,25 +338,32 @@ export default function PlayerStats() {
     }
 
     loadStats();
-  }, [activeFilter, tip]);
+  }, [tip.player_id, tip.opponent_team_id, tip.team_id, activeFilter]);
+
+  // 6. Fetch Defense Stats
   useEffect(() => {
-    if (!tip?.opponent_team_id || !tip?.position || !tip?.market) return;
+    // Force TypeScript to see these as strings
+    const opponentId: string = tip.opponent_team_id || "";
+    const positionStr: string = tip.position || "";
+
+    if (!opponentId || !positionStr) return;
 
     async function loadDefense() {
       try {
         const data = await fetchDefenseRankings(
-          tip.opponent_team_id,
-          tip.position || "PG",
+          opponentId,
+          positionStr,
           defenseLimit,
         );
-        setDefenseData(data); // Changed from setDefenseRankings
+        setDefenseData(data);
       } catch (err) {
         console.error(err);
       }
     }
 
     loadDefense();
-  }, [tip, defenseLimit]);
+  }, [tip.opponent_team_id, tip.position, defenseLimit]);
+
   if (!tip) {
     return (
       <div className={styles.noData}>
@@ -359,7 +413,8 @@ export default function PlayerStats() {
     }
     return value < tip.line ? "#4caf50" : "#e94560";
   };
-
+  const displayedStats =
+    activeFilter === "h2h" ? stats : stats.slice(-parseInt(activeFilter));
   return (
     <div className={styles.container}>
       {/* Back Button & Header */}
@@ -367,20 +422,149 @@ export default function PlayerStats() {
         ← Back to Dashboard
       </button>
 
-      <h2 className={styles.title}>{tip.player}</h2>
-      <p className={styles.subtitle}>
-        {marketLabel()} | Line: {tip.line} | vs {tip.opponent}
-      </p>
+      {/* PLAYER NAME */}
+      <h2 className={styles.title}>{tip.player || "Player Stats"}</h2>
 
-      {/* Hit Rate Boxes */}
+      {/* ==========================================
+          NEW: INTERACTIVE PROP TOOLBAR 
+          ========================================== */}
+      <div
+        style={{
+          display: "flex",
+          gap: "15px",
+          alignItems: "center",
+          marginBottom: "25px",
+          padding: "15px",
+          background: "white",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Over/Under Toggle */}
+        <select
+          value={inputOverUnder}
+          onChange={(e) =>
+            setInputOverUnder(e.target.value as "over" | "under")
+          }
+          style={{
+            padding: "8px 12px",
+            borderRadius: "6px",
+            border: "none",
+            fontWeight: "bold",
+            background: inputOverUnder === "over" ? "#4caf50" : "#e94560",
+            color: "white",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          <option value="over">OVER</option>
+          <option value="under">UNDER</option>
+        </select>
+
+        {/* Line Input */}
+        <input
+          type="number"
+          step="1"
+          value={inputLine}
+          onChange={(e) => setInputLine(parseFloat(e.target.value))}
+          style={{
+            padding: "8px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            fontWeight: "bold",
+            width: "80px",
+            textAlign: "center",
+            fontSize: "16px",
+          }}
+        />
+
+        {/* Prop Type Dropdown */}
+        <select
+          value={inputMarket}
+          onChange={(e) => setInputMarket(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            fontWeight: "bold",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          <option value="points">Points</option>
+          <option value="rebounds">Rebounds</option>
+          <option value="assists">Assists</option>
+          <option value="threes_made">3PT Made</option>
+        </select>
+
+        {/* SEARCH BUTTON */}
+        <button
+          onClick={handleSearch}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "6px",
+            border: "none",
+            background: "#0f3460",
+            color: "white",
+            fontWeight: "bold",
+            cursor: "pointer",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          🔍 Search
+        </button>
+
+        {/* Opponent Info (Static visual reference) */}
+        {tip.opponent && (
+          <div style={{ marginLeft: "auto", fontSize: "14px", color: "#666" }}>
+            vs {tip.opponent} | {tip.position || "N/A"}
+          </div>
+        )}
+      </div>
+      {/* ========================================== */}
+
       <div className={styles.hitRatesContainer}>
-        <HitRateBox label="L5" hr={tip.hit_rates?.last5} />
-        <HitRateBox label="L10" hr={tip.hit_rates?.last10} />
-        <HitRateBox label="L15" hr={tip.hit_rates?.last15} />
-        <HitRateBox label="Season" hr={tip.hit_rates?.season} />
+        <HitRateBox
+          label="L5"
+          hr={calculateHitRate(
+            stats
+              .slice(-5)
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -5
+            tip.line,
+          )}
+        />
+        <HitRateBox
+          label="L10"
+          hr={calculateHitRate(
+            stats
+              .slice(-10)
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -10
+            tip.line,
+          )}
+        />
+        <HitRateBox
+          label="L15"
+          hr={calculateHitRate(
+            stats
+              .slice(-15)
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -15
+            tip.line,
+          )}
+        />
+        <HitRateBox
+          label="Season"
+          hr={calculateHitRate(
+            stats.map((s) => s[marketKey() as keyof PlayerGameStat] as number), // Season stays the same (uses all stats)
+            tip.line,
+          )}
+        />
         <HitRateBox
           label={`VS ${tip.opponent_team_id}`}
-          hr={tip.hit_rates?.vs_opp}
+          hr={savedState?.hit_rates?.vs_opp}
         />
       </div>
 
@@ -403,7 +587,7 @@ export default function PlayerStats() {
       <div className={styles.chartContainer}>
         <h3 className={styles.chartTitle}>{marketLabel()} per Game</h3>
         <ResponsiveContainer width="100%" height="90%">
-          <BarChart data={stats}>
+          <BarChart data={displayedStats}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis
               dataKey="dateFormatted"
@@ -442,7 +626,7 @@ export default function PlayerStats() {
                 fontWeight: "bold",
               }}
             >
-              {stats.map((entry, index) => {
+              {displayedStats.map((entry, index) => {
                 // Get the stat value for this specific game
                 const value = entry[
                   marketKey() as keyof PlayerGameStat
@@ -491,7 +675,7 @@ export default function PlayerStats() {
       {/* SUB-CHART: Dynamic based on button selected */}
       <div className={styles.subChartContainer}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={stats}>
+          <BarChart data={displayedStats}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis
               dataKey="date"

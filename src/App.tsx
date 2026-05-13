@@ -12,7 +12,7 @@ export default function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<TypsDashboard />} />
-        <Route path="/player-stats" element={<PlayerPage />} />
+        <Route path="/player-stats/:playerId" element={<PlayerPage />} />
         <Route path="/parlay-builder" element={<ParlayBuilderPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
