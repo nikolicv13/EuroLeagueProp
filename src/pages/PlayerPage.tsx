@@ -5,12 +5,17 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { fetchDefenseRankings, fetchPlayerStats } from "../api/api";
+import {
+  fetchDefenseRankings,
+  fetchPlayerSearch,
+  fetchPlayerStats,
+} from "../api/api";
 import type {
   PlayerGameStat,
   CustomXTickProps,
   DefenseRankings,
   DefenseStatRank,
+  PlayerSearchResult,
 } from "../api/api";
 import {
   BarChart,
@@ -248,7 +253,7 @@ export default function PlayerStats() {
   const navigate = useNavigate();
 
   const { playerId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [savedState] = useState(
     location.state as {
@@ -299,13 +304,29 @@ export default function PlayerStats() {
   const [inputLine, setInputLine] = useState(tip.line);
   const [inputOverUnder, setInputOverUnder] = useState(tip.selection);
 
+  const [searchQuery, setSearchQuery] = useState(tip.player || "");
+  const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+
   const handleSearch = () => {
-    setSearchParams({
-      propType: inputMarket,
-      propAmount: String(isNaN(inputLine) ? tip.line : inputLine),
-      overUnder: inputOverUnder,
-    });
-    setActiveFilter("10"); // Reset graph to L10 for the new search
+    const targetPlayerId = selectedPlayerId || playerId;
+
+    const newAmount = inputLine !== undefined ? inputLine : tip.line;
+
+    navigate(
+      `/player-stats/${targetPlayerId}?propType=${inputMarket}&propAmount=${isNaN(newAmount) ? tip.line : newAmount}&overUnder=${inputOverUnder}`,
+      {
+        state: {
+          ...savedState,
+          player_id: targetPlayerId,
+          player: searchQuery,
+        },
+      },
+    );
+
+    // Reset the draft player ID so it's ready for next search
+    setSelectedPlayerId(null);
   };
 
   // 5A. Fetch SEASON Stats (always runs)
@@ -338,7 +359,6 @@ export default function PlayerStats() {
     }
 
     loadSeasonStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tip.player_id, tip.team_id]);
 
   // 5B. Fetch H2H Stats (runs when opponent is available)
@@ -375,7 +395,6 @@ export default function PlayerStats() {
     }
 
     loadH2HStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tip.player_id, tip.opponent_team_id, tip.team_id]);
 
   // 6. Fetch Defense Stats
@@ -453,6 +472,30 @@ export default function PlayerStats() {
   };
   const displayedStats =
     activeFilter === "h2h" ? h2hStats : stats.slice(-parseInt(activeFilter));
+
+  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.length >= 2) {
+      try {
+        const results = await fetchPlayerSearch(value);
+        setSearchResults(results);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
+  };
+
+  const handleSelectPlayer = (player: PlayerSearchResult) => {
+    setSearchQuery(player.player_name);
+    setSelectedPlayerId(player.player_id); // <-- Save the ID locally
+    setShowDropdown(false);
+  };
   return (
     <div className={styles.container}>
       {/* Back Button & Header */}
@@ -460,8 +503,79 @@ export default function PlayerStats() {
         ← Back to Dashboard
       </button>
 
-      {/* PLAYER NAME */}
-      <h2 className={styles.title}>{tip.player || "Player Stats"}</h2>
+      {/* PLAYER SEARCH BAR */}
+      <div
+        style={{ position: "relative", marginBottom: "10px", width: "100%" }}
+      >
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // Hide dropdown when clicking away
+          onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+          placeholder="Search player..."
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            border: "none",
+            outline: "none",
+            width: "100%",
+            padding: "5px 0",
+            borderBottom: "2px solid #0f3460",
+            background: "transparent",
+          }}
+        />
+
+        {/* Search Dropdown */}
+        {showDropdown && searchResults.length > 0 && (
+          <ul
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              background: "white",
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              maxHeight: "250px",
+              overflowY: "auto",
+              zIndex: 1000,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            }}
+          >
+            {searchResults.map((p) => (
+              <li
+                key={p.player_id}
+                onClick={() => handleSelectPlayer(p)}
+                style={{
+                  padding: "10px 15px",
+                  cursor: "pointer",
+                  borderBottom: "1px solid #eee",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#f0f0f0")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "white")
+                }
+              >
+                <span style={{ fontWeight: "bold", color: "#333" }}>
+                  {p.player_name}
+                </span>
+                <span style={{ color: "#888", fontSize: "14px" }}>
+                  {p.team_id} | {p.position}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* ==========================================
           NEW: INTERACTIVE PROP TOOLBAR 

@@ -40,23 +40,25 @@ app.get("/api/players/search", async (req, res) => {
         .json({ error: "Please provide a search term using ?q=name" });
     }
 
-    // Search the database
     const result = await pool.query(
       `SELECT 
         p.player_id, 
-        p.player_name, 
-        p.position, 
-        p.team_id,
-        ps.season_code,
-        ps.points_per_game, 
-        ps.assists_per_game, 
-        ps.total_rebounds_per_game
+        MAX(p.player_name) as player_name, 
+        MAX(p.position) as position, 
+        MAX(p.team_id) as team_id,
+        MAX(ps.points_per_game) as points_per_game,
+        MAX(ps.assists_per_game) as assists_per_game,
+        MAX(ps.total_rebounds_per_game) as total_rebounds_per_game
       FROM players p
       LEFT JOIN player_season_stats ps 
-        ON p.player_id = ps.player_id
+        ON p.player_id = ps.player_id 
+        AND ps.season_code = (
+          SELECT MAX(season_code) FROM player_season_stats WHERE player_id = p.player_id
+        )
       WHERE p.player_name ILIKE $1
-      ORDER BY ps.points_per_game DESC
-      LIMIT 20`,
+      GROUP BY p.player_id
+      ORDER BY MAX(ps.points_per_game) DESC NULLS LAST
+      LIMIT 15`,
       [`%${searchQuery}%`],
     );
 
@@ -605,6 +607,30 @@ app.get("/api/players/:id/info", async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to fetch player info", details: error.message });
+  }
+});
+
+// ==========================================
+// ROUTE 8: Search Players
+// ==========================================
+app.get("/api/players/search", async (req, res) => {
+  try {
+    const q = req.query.q;
+    if (!q || q.length < 2) return res.json([]);
+
+    const result = await pool.query(
+      `SELECT DISTINCT ON (player_name) 
+        player_id, player_name, team_id, position 
+      FROM players 
+      WHERE player_name ILIKE $1 
+      ORDER BY player_name, player_id DESC 
+      LIMIT 10`,
+      [`%${q}%`],
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Search failed", details: error.message });
   }
 });
 // ==========================================

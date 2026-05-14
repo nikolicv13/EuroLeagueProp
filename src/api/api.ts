@@ -13,6 +13,13 @@ export interface Game {
   score_b: number | null;
 }
 
+export interface PlayerSearchResult {
+  player_id: string;
+  player_name: string;
+  team_id: string;
+  position: string;
+}
+
 export interface HitRate {
   hits: number;
   attempts: number;
@@ -172,5 +179,12 @@ export async function fetchDefenseRankings(
   const url = `${API_URL}/defense/${teamId}/${position}?limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch defense rankings");
+  return res.json();
+}
+export async function fetchPlayerSearch(
+  query: string,
+): Promise<PlayerSearchResult[]> {
+  const res = await fetch(`${API_URL}/players/search?q=${query}`);
+  if (!res.ok) throw new Error("Search failed");
   return res.json();
 }
