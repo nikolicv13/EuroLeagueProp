@@ -30,7 +30,12 @@ function parseMinutes(minStr: string): number {
 
   return parseFloat(minStr.replace(":", "."));
 }
-function calculateHitRate(values: number[], line: number) {
+// Calculate hit rate from actual graph values
+function calculateHitRate(
+  values: number[],
+  line: number,
+  selection: "over" | "under",
+) {
   if (values.length === 0) return { hits: 0, attempts: 0, rate: 0 };
 
   let hits = 0;
@@ -38,7 +43,8 @@ function calculateHitRate(values: number[], line: number) {
 
   for (const value of values) {
     attempts++;
-    if (value > line) hits++;
+    if (selection === "over" && value > line) hits++;
+    if (selection === "under" && value < line) hits++;
   }
 
   return { hits, attempts, rate: attempts > 0 ? hits / attempts : 0 };
@@ -280,6 +286,7 @@ export default function PlayerStats() {
       "over") as "over" | "under",
   };
   const [stats, setStats] = useState<PlayerGameStat[]>([]);
+  const [h2hStats, setH2hStats] = useState<PlayerGameStat[]>([]);
   const [activeFilter, setActiveFilter] = useState<"5" | "10" | "15" | "h2h">(
     "10",
   );
@@ -301,19 +308,12 @@ export default function PlayerStats() {
     setActiveFilter("10"); // Reset graph to L10 for the new search
   };
 
+  // 5A. Fetch SEASON Stats (always runs)
   useEffect(() => {
     if (!tip.player_id) return;
 
-    async function loadStats() {
-      let limit = 38; // ✅ Always fetch up to 50 games (full season)
-      let opponent = undefined;
-
-      if (activeFilter === "h2h") {
-        limit = 20;
-        opponent = tip.opponent_team_id;
-      }
-
-      const data = await fetchPlayerStats(tip.player_id, limit, opponent);
+    async function loadSeasonStats() {
+      const data = await fetchPlayerStats(tip.player_id, 38, undefined);
       const reversed = data.reverse();
 
       const formatted = reversed.map((game) => {
@@ -337,8 +337,46 @@ export default function PlayerStats() {
       setStats(formatted);
     }
 
-    loadStats();
-  }, [tip.player_id, tip.opponent_team_id, tip.team_id, activeFilter]);
+    loadSeasonStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tip.player_id, tip.team_id]);
+
+  // 5B. Fetch H2H Stats (runs when opponent is available)
+  useEffect(() => {
+    if (!tip.player_id || !tip.opponent_team_id) return;
+
+    async function loadH2HStats() {
+      const data = await fetchPlayerStats(
+        tip.player_id,
+        100,
+        tip.opponent_team_id,
+      );
+      const reversed = data.reverse();
+
+      const formatted = reversed.map((game) => {
+        const playerTeamId = game.team_id || tip.team_id;
+        const isTeamA = game.team_id_a === playerTeamId;
+        const opponentId = isTeamA ? game.team_id_b : game.team_id_a;
+
+        return {
+          ...game,
+          parsedMinutes: Math.round(parseMinutes(game.minutes)),
+          fga:
+            (parseInt(String(game.two_points_attempted)) || 0) +
+            (parseInt(String(game.three_points_attempted)) || 0),
+          three_points_attempted:
+            parseInt(String(game.three_points_attempted)) || 0,
+          opponent_id: opponentId,
+          dateFormatted: formatDate(game.date) + "|" + opponentId,
+        };
+      });
+
+      setH2hStats(formatted);
+    }
+
+    loadH2HStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tip.player_id, tip.opponent_team_id, tip.team_id]);
 
   // 6. Fetch Defense Stats
   useEffect(() => {
@@ -414,7 +452,7 @@ export default function PlayerStats() {
     return value < tip.line ? "#4caf50" : "#e94560";
   };
   const displayedStats =
-    activeFilter === "h2h" ? stats : stats.slice(-parseInt(activeFilter));
+    activeFilter === "h2h" ? h2hStats : stats.slice(-parseInt(activeFilter));
   return (
     <div className={styles.container}>
       {/* Back Button & Header */}
@@ -526,15 +564,15 @@ export default function PlayerStats() {
         )}
       </div>
       {/* ========================================== */}
-
       <div className={styles.hitRatesContainer}>
         <HitRateBox
           label="L5"
           hr={calculateHitRate(
             stats
               .slice(-5)
-              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -5
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
             tip.line,
+            tip.selection,
           )}
         />
         <HitRateBox
@@ -542,8 +580,9 @@ export default function PlayerStats() {
           hr={calculateHitRate(
             stats
               .slice(-10)
-              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -10
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
             tip.line,
+            tip.selection,
           )}
         />
         <HitRateBox
@@ -551,20 +590,29 @@ export default function PlayerStats() {
           hr={calculateHitRate(
             stats
               .slice(-15)
-              .map((s) => s[marketKey() as keyof PlayerGameStat] as number), // ✅ Changed to -15
+              .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
             tip.line,
+            tip.selection,
           )}
         />
         <HitRateBox
           label="Season"
           hr={calculateHitRate(
-            stats.map((s) => s[marketKey() as keyof PlayerGameStat] as number), // Season stays the same (uses all stats)
+            stats.map((s) => s[marketKey() as keyof PlayerGameStat] as number),
             tip.line,
+            tip.selection,
           )}
         />
+        {/* H2H now calculates dynamically from h2hStats! */}
         <HitRateBox
           label={`VS ${tip.opponent_team_id}`}
-          hr={savedState?.hit_rates?.vs_opp}
+          hr={calculateHitRate(
+            h2hStats.map(
+              (s) => s[marketKey() as keyof PlayerGameStat] as number,
+            ),
+            tip.line,
+            tip.selection,
+          )}
         />
       </div>
 
