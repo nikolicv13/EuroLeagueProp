@@ -194,7 +194,7 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
           className={`${styles.ppActionBtn} ${styles.ppActionBtnPrimary}`}
           type="button"
           onClick={() => {
-            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${tip.opponent_team_id}&oppName=${encodeURIComponent(tip.opponent)}&teamId=${tip.team_id}&position=${tip.position}`;
+            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${tip.opponent_team_id}&oppName=${encodeURIComponent(tip.opponent)}&teamId=${tip.team_id}&position=${tip.position}&season=E2025`; // <-- ADD THIS
             navigate(url, { state: tip });
           }}
         >

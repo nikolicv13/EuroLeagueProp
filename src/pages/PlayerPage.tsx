@@ -46,21 +46,32 @@ function calculateHitRate(
   if (values.length === 0) return { hits: 0, attempts: 0, rate: 0 };
 
   let hits = 0;
-  let attempts = 0;
 
   for (const value of values) {
-    attempts++;
     if (selection === "over" && value > line) hits++;
     if (selection === "under" && value < line) hits++;
   }
 
-  return { hits, attempts, rate: attempts > 0 ? hits / attempts : 0 };
+  // attempts = actual number of games in the array, NOT a hardcoded number!
+  return { hits, attempts: values.length, rate: hits / values.length };
 }
-const CustomXTick = ({ x, y, payload }: CustomXTickProps) => {
+const CustomXTick = ({ x, y, payload, activeFilter }: CustomXTickProps) => {
   if (x === undefined || y === undefined || !payload?.value) return null;
 
   // Split the combined value back into date and opponent
   const [dateStr, opponentId] = payload.value.split("|");
+
+  if (activeFilter === "season" && opponentId) {
+    return (
+      <image
+        x={x - 10}
+        y={y + 5}
+        width={20}
+        height={20}
+        href={`/logos/${opponentId}.png`}
+      />
+    );
+  }
 
   return (
     <g>
@@ -269,6 +280,7 @@ export default function PlayerStats() {
       opponent: string;
       team_id: string;
       game_id: string;
+      season_code: string;
       start_time: string;
       hit_rates?: {
         season: { hits: number; attempts: number; rate: number };
@@ -298,12 +310,14 @@ export default function PlayerStats() {
       : savedState?.opponent || "",
     team_id: searchParams.get("teamId") || savedState?.team_id || "",
     position: searchParams.get("position") || savedState?.position || "",
+    season: searchParams.get("season") || savedState?.season_code || "E2025",
   };
+
   const [stats, setStats] = useState<PlayerGameStat[]>([]);
   const [h2hStats, setH2hStats] = useState<PlayerGameStat[]>([]);
-  const [activeFilter, setActiveFilter] = useState<"5" | "10" | "15" | "h2h">(
-    "10",
-  );
+  const [activeFilter, setActiveFilter] = useState<
+    "5" | "10" | "15" | "h2h" | "season"
+  >("10");
   const [activeMetric, setActiveMetric] = useState<"minutes" | "fga" | "3pta">(
     "minutes",
   );
@@ -328,6 +342,7 @@ export default function PlayerStats() {
     const oppName = pendingTipData?.opponent || tip.opponent;
     const teamId = pendingTipData?.team_id || tip.team_id;
     const position = pendingTipData?.position || tip.position;
+    const season = tip.season;
 
     let newState = { ...savedState };
     if (pendingTipData) {
@@ -341,11 +356,12 @@ export default function PlayerStats() {
         opponent_team_id: oppTeam,
         opponent: oppName,
         game_id: gameId,
+        season_code: season,
       };
     }
 
     navigate(
-      `/player-stats/${targetPlayerId}?propType=${inputMarket}&propAmount=${isNaN(newAmount) ? tip.line : newAmount}&overUnder=${inputOverUnder}&oppTeam=${oppTeam}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${position}`,
+      `/player-stats/${targetPlayerId}?propType=${inputMarket}&propAmount=${isNaN(newAmount) ? tip.line : newAmount}&overUnder=${inputOverUnder}&oppTeam=${oppTeam}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${position}&season=${season}`,
       { state: newState },
     );
 
@@ -358,7 +374,12 @@ export default function PlayerStats() {
     if (!tip.player_id) return;
 
     async function loadSeasonStats() {
-      const data = await fetchPlayerStats(tip.player_id, 38, undefined);
+      const data = await fetchPlayerStats(
+        tip.player_id,
+        0,
+        undefined,
+        tip.season,
+      );
       const reversed = data.reverse();
 
       const formatted = reversed.map((game) => {
@@ -383,7 +404,7 @@ export default function PlayerStats() {
     }
 
     loadSeasonStats();
-  }, [tip.player_id, tip.team_id]);
+  }, [tip.player_id, tip.team_id, tip.season]);
 
   // 5B. Fetch H2H Stats (runs when opponent is available)
   useEffect(() => {
@@ -392,7 +413,7 @@ export default function PlayerStats() {
     async function loadH2HStats() {
       const data = await fetchPlayerStats(
         tip.player_id,
-        100,
+        0,
         tip.opponent_team_id,
       );
       const reversed = data.reverse();
@@ -511,7 +532,11 @@ export default function PlayerStats() {
     return value < tip.line ? "#4caf50" : "#e94560";
   };
   const displayedStats =
-    activeFilter === "h2h" ? h2hStats : stats.slice(-parseInt(activeFilter));
+    activeFilter === "h2h"
+      ? h2hStats
+      : activeFilter === "season"
+        ? stats // ✅ All season games!
+        : stats.slice(-parseInt(activeFilter)); // L5, L10, L15
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -829,7 +854,7 @@ export default function PlayerStats() {
               hr={calculateHitRate(
                 stats.map(
                   (s) => s[marketKey() as keyof PlayerGameStat] as number,
-                ),
+                ), // ALL games!
                 tip.line,
                 tip.selection,
               )}
@@ -849,7 +874,7 @@ export default function PlayerStats() {
 
           {/* Game Filter Buttons */}
           <div className={styles.filterButtons}>
-            {(["5", "10", "15", "h2h"] as const).map((f) => (
+            {(["5", "10", "15", "season", "h2h"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
@@ -857,7 +882,7 @@ export default function PlayerStats() {
                   activeFilter === f ? styles.filterButtonActive : ""
                 }`}
               >
-                {f === "h2h" ? "H2H" : `Last ${f}`}
+                {f === "h2h" ? "H2H" : f === "season" ? "Season" : `Last ${f}`}
               </button>
             ))}
           </div>
@@ -870,9 +895,10 @@ export default function PlayerStats() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis
                   dataKey="dateFormatted"
-                  tick={<CustomXTick />}
+                  tick={<CustomXTick activeFilter={activeFilter} />}
                   interval={0} // Forces all labels to show
                   height={50} // Make room for the logo
+                  angle={activeFilter === "season" ? 0 : 0}
                 />
                 <YAxis />
                 <Tooltip

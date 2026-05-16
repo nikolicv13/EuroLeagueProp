@@ -135,6 +135,7 @@ export interface DefenseRankings {
 export interface CustomXTickProps {
   x?: number;
   y?: number;
+  activeFilter: string;
   payload?: {
     value?: string; // Now contains "Jan 23|MAD"
   };
