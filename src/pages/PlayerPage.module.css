@@ -651,3 +651,75 @@
   margin-top: -12px;
   color: rgb(146, 140, 140);
 }
+
+filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.filterGroupLabel {
+  font-size: 11px;
+  font-weight: bold;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  padding: 4px 0;
+}
+
+.checkboxItem input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #0f3460; /* Makes the checkbox match your theme */
+}
+
+.checkboxItemDisabled {
+  composes: checkboxItem;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.checkboxItemDisabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.seasonDropdown {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  background: white;
+}
+
+.filterGroupLabel {
+  font-size: 11px;
+  font-weight: bold;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}

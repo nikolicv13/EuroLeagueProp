@@ -285,6 +285,10 @@ export default function PlayerStats() {
   const [venueFilter, setVenueFilter] = useState<"all" | "home" | "away">(
     "all",
   );
+  const [selectedSeason, setSelectedSeason] = useState<string>("E2025");
+  const [selectedLeagues, setSelectedLeagues] = useState<string[]>([
+    "euroleague",
+  ]);
   const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
   const [defenseLimit, setDefenseLimit] = useState<string>("season");
   const [inputMarket, setInputMarket] = useState(tip.market);
@@ -297,6 +301,16 @@ export default function PlayerStats() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [gameTips, setGameTips] = useState<Tip[]>([]);
   const [pendingTipData, setPendingTipData] = useState<Tip | null>(null);
+
+  const handleLeagueToggle = (league: string) => {
+    setSelectedLeagues((prev) => {
+      if (prev.includes(league)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((l) => l !== league);
+      }
+      return [...prev, league];
+    });
+  };
 
   const handleSearch = () => {
     const targetPlayerId = selectedPlayerId || playerId;
@@ -342,7 +356,8 @@ export default function PlayerStats() {
         tip.player_id,
         0,
         undefined,
-        tip.season,
+        selectedSeason, // <-- Only fetch the selected season
+        undefined,
       );
       const reversed = data.reverse();
 
@@ -368,7 +383,7 @@ export default function PlayerStats() {
     }
 
     loadSeasonStats();
-  }, [tip.player_id, tip.team_id, tip.season]);
+  }, [tip.player_id, tip.team_id, selectedSeason]);
 
   // 5B. Fetch H2H Stats (runs when opponent is available)
   useEffect(() => {
@@ -379,6 +394,8 @@ export default function PlayerStats() {
         tip.player_id,
         0,
         tip.opponent_team_id,
+        undefined, // <-- NO season filter! Fetches all-time H2H
+        undefined,
       );
       const reversed = data.reverse();
 
@@ -496,7 +513,7 @@ export default function PlayerStats() {
   };
 
   // 1. Filter by Venue (Home / Away / Both)
-  // 1. Filter by Venue (Home / Away / Both)
+
   const filterByVenue = (games: PlayerGameStat[]) => {
     if (venueFilter === "all") return games;
 
@@ -1046,11 +1063,42 @@ export default function PlayerStats() {
             </button>
           </div>
 
-          {/* 
-            Future filters go right here! 
-            They will stack perfectly below Home/Away/Both.
-            e.g., <div className={styles.seasonToggleGroup}>...</div>
-          */}
+          {/* SEASON FILTER */}
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Season</span>
+            <select
+              className={styles.seasonDropdown}
+              value={selectedSeason}
+              onChange={(e) => setSelectedSeason(e.target.value)}
+            >
+              <option value="E2025">2024/25</option>
+              <option value="E2024">2023/24</option>
+              <option value="E2023">2022/23</option>
+            </select>
+          </div>
+          {/* LEAGUE FILTER */}
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>League</span>
+
+            <label className={styles.checkboxItem}>
+              <input
+                type="checkbox"
+                checked={selectedLeagues.includes("euroleague")}
+                onChange={() => handleLeagueToggle("euroleague")}
+              />
+              Euroleague
+            </label>
+
+            <label className={styles.checkboxItemDisabled}>
+              <input type="checkbox" disabled checked={false} />
+              NBA
+            </label>
+
+            <label className={styles.checkboxItemDisabled}>
+              <input type="checkbox" disabled checked={false} />
+              Eurocup
+            </label>
+          </div>
         </div>
       </div>
     </div>
