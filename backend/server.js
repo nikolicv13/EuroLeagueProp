@@ -774,154 +774,265 @@ app.get("/api/players/search", async (req, res) => {
 //   }
 // });
 
-// // ==========================================
-// // ROUTE 10: Fetch Odds & Merge with DB Stats
-// // ==========================================
 // ==========================================
-// ROUTE 10: Fetch Odds & Smart Over/Under Selection
+// ROUTE 10: Fetch Expanded Props from BrazilBet
 // ==========================================
-// app.get('/api/odds/brazilbet/:leagueId', async (req, res) => {
+// app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
 //   const { leagueId } = req.params;
 
 //   try {
-//     // 1. Fetch props from BrazilBet
-//     const url = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/league/${leagueId}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
-//     const response = await fetch(url);
-//     if (!response.ok) throw new Error('Failed to fetch from BrazilBet');
+//     // 1. Fetch League Data (gets all players/matches)
+//     const leagueUrl = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/league/${leagueId}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
+//     const leagueRes = await fetch(leagueUrl);
+//     if (!leagueRes.ok) throw new Error("Failed to fetch league data");
+//     const leagueData = await leagueRes.json();
 
-//     const data = await response.json();
-//     if (!data.esMatches || data.esMatches.length === 0) return res.json([]);
+//     if (!leagueData.esMatches || leagueData.esMatches.length === 0)
+//       return res.json([]);
+
+//     // 2. Fetch Match Details for ALL matches concurrently
+//     const detailPromises = leagueData.esMatches.map(async (match) => {
+//       try {
+//         // Assuming the match detail URL uses /match/{matchId}/
+//         const detailUrl = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/match/${match.id}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
+//         const detailRes = await fetch(detailUrl);
+//         if (!detailRes.ok) return match; // Fallback to league data if detail fails
+//         return await detailRes.json();
+//       } catch (err) {
+//         return match; // Fallback
+//       }
+//     });
+
+//     const detailedMatches = await Promise.all(detailPromises);
 
 //     const tips = [];
 
-//     // 2. Loop through each available prop
-//     for (const match of data.esMatches) {
+//     // 3. Process each detailed match
+//     for (const match of detailedMatches) {
 //       const playerName = match.home;
+//       const opponentName = match.away;
 //       const params = match.params || {};
-//       const oddsObj = match.odds || {};
+//       const odds = match.odds || {};
+//       const oddsArr = Object.values(odds); // Array of all odds values
 
-//       // Extract Over and Under odds (usually first is Over, second is Under)
-//       const oddsArr = Object.values(oddsObj);
-//       const overOdds = oddsArr[0] || 1.90;
-//       const underOdds = oddsArr[1] || 1.90;
-
-//       // 3. Try to find this player in our database
+//       // 4. Try to find this player in our DB (optional, won't break if not found)
 //       const playerRes = await pool.query(
 //         `SELECT player_id, player_name, position, team_id FROM players WHERE player_name ILIKE $1 LIMIT 1`,
-//         [`%${playerName}%`]
+//         [`%${playerName}%`],
 //       );
 
-//       if (playerRes.rows.length === 0) continue; // Skip if player not in our DB
-//       const dbPlayer = playerRes.rows[0];
+//       const dbPlayer = playerRes.rows[0] || {
+//         player_id: `NBA_${playerName.replace(/\s/g, "_")}`,
+//         player_name: playerName,
+//         position: "G",
+//         team_id: "NBA",
+//       };
 
-//       // 4. Find the REAL opponent from our database (next upcoming game)
-//       const nextGameRes = await pool.query(
-//         `SELECT game_id, team_id_a, team_id_b, team_a, team_b, date
-//          FROM games
-//          WHERE (team_id_a = $1 OR team_id_b = $1) AND date >= CURRENT_DATE
-//          ORDER BY date ASC LIMIT 1`,
-//         [dbPlayer.team_id]
-//       );
-
+//       // 5. Find real opponent (if in DB)
 //       let realOpponentId = "TBD";
-//       let realOpponentName = "Unknown";
+//       let realOpponentName = opponentName;
 //       let realGameId = String(match.id);
 
-//       if (nextGameRes.rows.length > 0) {
-//         const nextGame = nextGameRes.rows[0];
-//         realGameId = nextGame.game_id;
-
-//         if (nextGame.team_id_a === dbPlayer.team_id) {
-//           realOpponentId = nextGame.team_id_b;
-//           realOpponentName = nextGame.team_b;
-//         } else {
-//           realOpponentId = nextGame.team_id_a;
-//           realOpponentName = nextGame.team_a;
+//       if (playerRes.rows.length > 0) {
+//         const nextGameRes = await pool.query(
+//           `SELECT game_id, team_id_a, team_id_b, team_a, team_b FROM games WHERE (team_id_a = $1 OR team_id_b = $1) AND date >= CURRENT_DATE ORDER BY date ASC LIMIT 1`,
+//           [dbPlayer.team_id],
+//         );
+//         if (nextGameRes.rows.length > 0) {
+//           const ng = nextGameRes.rows[0];
+//           realGameId = ng.game_id;
+//           realOpponentId =
+//             ng.team_id_a === dbPlayer.team_id ? ng.team_id_b : ng.team_id_a;
+//           realOpponentName =
+//             ng.team_id_a === dbPlayer.team_id ? ng.team_b : ng.team_a;
 //         }
 //       }
 
-//       // 5. Define the markets we want to process
-//       const marketMap = {
-//         ouPlPoints: { market: "points", key: "points" },
-//         ouPlAssists: { market: "assists", key: "assists" },
-//         ouPlRebounds: { market: "rebounds", key: "total_rebounds" },
-//       };
+//       // 6. Define ALL markets and how to extract their odds
+//       const marketConfigs = [
+//         // STANDARD MARKETS (First 6 odds)
+//         {
+//           param: "ouPlPoints",
+//           market: "points",
+//           overOddsIdx: 0,
+//           underOddsIdx: 1,
+//         },
+//         {
+//           param: "ouPlAssists",
+//           market: "assists",
+//           overOddsIdx: 2,
+//           underOddsIdx: 3,
+//         },
+//         {
+//           param: "ouPlRebounds",
+//           market: "rebounds",
+//           overOddsIdx: 4,
+//           underOddsIdx: 5,
+//         },
 
-//       // 6. Process each market
-//       for (const [paramKey, config] of Object.entries(marketMap)) {
-//         const lineString = params[paramKey];
-//         if (!lineString) continue;
+//         // EXPANDED MARKETS (Using your mapped IDs)
+//         {
+//           param: "ouPlTPRA",
+//           market: "pra",
+//           overOddsId: 55215,
+//           underOddsId: 55217,
+//         }, // PRA
+//         {
+//           param: "ouPlTPR",
+//           market: "pr",
+//           overOddsId: 55244,
+//           underOddsId: 55246,
+//         }, // PR
+//         {
+//           param: "ouPlTPA",
+//           market: "pa",
+//           overOddsId: 55247,
+//           underOddsId: 55249,
+//         }, // PA
+//         {
+//           param: "ouPlTRA",
+//           market: "ra",
+//           overOddsId: 55250,
+//           underOddsId: 55252,
+//         }, // RA
+
+//         // PLAYER PROPS
+//         {
+//           param: "ouPlSt",
+//           market: "steals",
+//           overOddsId: 55672,
+//           underOddsId: 55674,
+//         },
+//         {
+//           param: "ouPlB",
+//           market: "blocks",
+//           overOddsId: 55681,
+//           underOddsId: 55683,
+//         },
+
+//         // ALTERNATE LINES
+//         {
+//           param: "ouPlP2",
+//           market: "points_alt",
+//           overOddsId: 55253,
+//           underOddsId: 55255,
+//         },
+//         {
+//           param: "ouPlP3",
+//           market: "points_alt2",
+//           overOddsId: 55256,
+//           underOddsId: 55258,
+//         },
+//         {
+//           param: "ouPlA3",
+//           market: "assists_alt",
+//           overOddsId: 55262,
+//           underOddsId: 55264,
+//         },
+//         {
+//           param: "ouPlR2",
+//           market: "rebounds_alt",
+//           overOddsId: 55265,
+//           underOddsId: 55267,
+//         },
+//         {
+//           param: "ouPlR3",
+//           market: "rebounds_alt2",
+//           overOddsId: 55268,
+//           underOddsId: 55270,
+//         },
+//       ];
+
+//       // 7. Process each market configuration
+//       for (const config of marketConfigs) {
+//         const lineString = params[config.param];
+//         if (!lineString) continue; // Skip if this line isn't available
 
 //         const line = parseFloat(lineString);
 
-//         // Fetch this player's last 50 games
-//         const statsRes = await pool.query(
-//           `SELECT bs.${config.key}, bs.minutes
-//            FROM box_scores bs
-//            JOIN games g ON bs.game_id = g.game_id
-//            WHERE bs.player_id = $1
-//              AND g.date <= CURRENT_DATE
-//              AND bs.minutes IS NOT NULL AND bs.minutes != 'DNP'
-//            ORDER BY g.date DESC
-//            LIMIT 50`,
-//           [dbPlayer.player_id]
-//         );
+//         // Extract Over/Under odds
+//         let overOdds = 1.9;
+//         let underOdds = 1.9;
 
-//         const games = statsRes.rows;
+//         if (config.overOddsIdx !== undefined) {
+//           // Standard markets (by index)
+//           overOdds = oddsArr[config.overOddsIdx] || 1.9;
+//           underOdds = oddsArr[config.underOddsIdx] || 1.9;
+//         } else {
+//           // Expanded markets (by specific ID)
+//           overOdds = odds[config.overOddsId] || 1.9;
+//           underOdds = odds[config.underOddsId] || 1.9;
+//         }
 
-//         // 7. Smart Calculation: Analyze BOTH Over and Under hit rates
-//         const analyzeMarket = (gameList) => {
-//           if (gameList.length === 0) return { selection: "over", rate: 0, hits: 0, attempts: 0 };
-
-//           let overHits = 0;
-//           let underHits = 0;
-//           let attempts = 0;
-
-//           for (const g of gameList) {
-//             const value = parseFloat(g[config.key]) || 0;
-//             attempts++;
-//             if (value > line) overHits++;
-//             else if (value < line) underHits++;
-//             // Exactly on the line = push, doesn't count for either
-//           }
-
-//           const overRate = attempts > 0 ? overHits / attempts : 0;
-//           const underRate = attempts > 0 ? underHits / attempts : 0;
-
-//           // Recommend whichever has a higher hit rate!
-//           if (overRate >= underRate) {
-//             return { selection: "over", rate: overRate, hits: overHits, attempts };
-//           } else {
-//             return { selection: "under", rate: underRate, hits: underHits, attempts };
-//           }
+//         // 8. Calculate Hit Rates (Only if player is in our DB)
+//         let hitRates = {
+//           season: { hits: 0, attempts: 0, rate: 0 },
+//           last5: { hits: 0, attempts: 0, rate: 0 },
+//           last10: { hits: 0, attempts: 0, rate: 0 },
+//           last15: { hits: 0, attempts: 0, rate: 0 },
+//           vs_opp: { hits: 0, attempts: 0, rate: 0 },
 //         };
+//         let score = 50;
+//         let finalSelection = "over";
 
-//         const seasonAnalysis = analyzeMarket(games);
-//         const last5Analysis = analyzeMarket(games.slice(0, 5));
-//         const last10Analysis = analyzeMarket(games.slice(0, 10));
-//         const last15Analysis = analyzeMarket(games.slice(0, 15));
+//         if (playerRes.rows.length > 0) {
+//           const dbKeyMap = {
+//             points: "points",
+//             assists: "assists",
+//             rebounds: "total_rebounds",
+//             steals: "steals",
+//             blocks: "blocks_favour",
+//             // Note: PRA, PR, PA, RA would need custom SQL math. Skipping for now.
+//           };
 
-//         // 8. Determine the final recommendation (Prioritize Last 10 as the best indicator)
-//         const finalSelection = last10Analysis.selection;
-//         const finalOdds = finalSelection === "over" ? overOdds : underOdds;
+//           const dbKey = dbKeyMap[config.market];
 
-//         // 9. Calculate Score (Weight recent form heavily)
-//         const minutesRes = await pool.query(
-//           `SELECT minutes_per_game FROM player_season_stats WHERE player_id = $1 LIMIT 1`,
-//           [dbPlayer.player_id]
-//         );
-//         const mpg = parseFloat(minutesRes.rows[0]?.minutes_per_game) || 20;
-//         const minutesWeight = Math.min(mpg / 30, 1);
+//           if (dbKey) {
+//             const statsRes = await pool.query(
+//               `SELECT bs.${dbKey} FROM box_scores bs JOIN games g ON bs.game_id = g.game_id WHERE bs.player_id = $1 AND g.date <= CURRENT_DATE AND bs.minutes IS NOT NULL AND bs.minutes != 'DNP' ORDER BY g.date DESC LIMIT 50`,
+//               [dbPlayer.player_id],
+//             );
 
-//         const score = Math.round(
-//           (last5Analysis.rate * 40) +
-//           (last10Analysis.rate * 30) +
-//           (minutesWeight * 30)
-//         );
+//             const games = statsRes.rows;
+//             if (games.length > 0) {
+//               const analyze = (list) => {
+//                 let over = 0,
+//                   under = 0,
+//                   att = 0;
+//                 for (const g of list) {
+//                   const val = parseFloat(g[dbKey]) || 0;
+//                   att++;
+//                   if (val > line) over++;
+//                   else if (val < line) under++;
+//                 }
+//                 const oRate = att > 0 ? over / att : 0;
+//                 const uRate = att > 0 ? under / att : 0;
+//                 return oRate >= uRate
+//                   ? { sel: "over", rate: oRate, hits: over, att }
+//                   : { sel: "under", rate: uRate, hits: under, att };
+//               };
 
-//         // 10. Build the tip object
+//               const sA = analyze(games);
+//               const l5A = analyze(games.slice(0, 5));
+//               const l10A = analyze(games.slice(0, 10));
+//               const l15A = analyze(games.slice(0, 15));
+
+//               finalSelection = l10A.sel;
+//               hitRates = {
+//                 season: sA,
+//                 last5: l5A,
+//                 last10: l10A,
+//                 last15: l15A,
+//                 vs_opp: { hits: 0, attempts: 0, rate: 0 },
+//               };
+//               score = Math.round(l5A.rate * 40 + l10A.rate * 30 + 30);
+//             }
+//           }
+//         }
+
+//         // 9. Push the tip
 //         tips.push({
-//           id: `${realGameId}_${dbPlayer.player_id}_${config.market}`,
+//           id: `${realGameId}_${dbPlayer.player_id}_${config.market}_${line}`,
 //           game_id: realGameId,
 //           start_time: new Date(match.kickOffTime).toISOString(),
 //           player_id: dbPlayer.player_id,
@@ -932,17 +1043,13 @@ app.get("/api/players/search", async (req, res) => {
 //           opponent: realOpponentName,
 //           position: dbPlayer.position,
 //           market: config.market,
-//           selection: finalSelection, // <-- "over" or "under" based on math!
+//           selection: finalSelection,
 //           line: line,
-//           odds: finalOdds,           // <-- Real odds for the recommended selection!
-//           hit_rates: {
-//             season: { hits: seasonAnalysis.hits, attempts: seasonAnalysis.attempts, rate: seasonAnalysis.rate },
-//             last5: { hits: last5Analysis.hits, attempts: last5Analysis.attempts, rate: last5Analysis.rate },
-//             last10: { hits: last10Analysis.hits, attempts: last10Analysis.attempts, rate: last10Analysis.rate },
-//             last15: { hits: last15Analysis.hits, attempts: last15Analysis.attempts, rate: last15Analysis.rate },
-//             vs_opp: { hits: 0, attempts: 0, rate: 0 }
-//           },
-//           score: score
+//           odds: finalSelection === "over" ? overOdds : underOdds,
+//           overOdds: overOdds, // Send both so frontend can display them
+//           underOdds: underOdds,
+//           hit_rates: hitRates,
+//           score: score,
 //         });
 //       }
 //     }
@@ -950,10 +1057,11 @@ app.get("/api/players/search", async (req, res) => {
 //     // Sort by score (best bets at the top)
 //     tips.sort((a, b) => b.score - a.score);
 //     res.json(tips);
-
 //   } catch (error) {
 //     console.error(error);
-//     res.status(500).json({ error: 'Failed to process odds', details: error.message });
+//     res
+//       .status(500)
+//       .json({ error: "Failed to process odds", details: error.message });
 //   }
 // });
 // ==========================================

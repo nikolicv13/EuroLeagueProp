@@ -1,7 +1,9 @@
 .container {
-  padding: 40px;
-  max-width: 800px;
-  margin: 0 auto;
+  flex: 1;
+  max-width: 1100px;
+  min-width: 0;
+  width: 100%;
+  padding-left: 200px;
   font-family: sans-serif;
 }
 
@@ -39,8 +41,8 @@
 
 .filterButtons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px; /* Adjust to match your existing style */
+  flex-wrap: wrap;
 }
 
 .filterButton {
@@ -223,6 +225,8 @@
   flex: 1;
   min-width: 0; /* Prevents flex overflow issues */
   overflow-x: auto;
+  display: flex;
+  gap: 20px;
 }
 
 .sidebarItem {
@@ -254,4 +258,396 @@
 .sidebarPropText {
   font-size: "12px";
   color: "#666";
+}
+
+/* ==========================================
+   SIDEBAR STYLES
+   ========================================== */
+.sidebarTitle {
+  margin-top: 0;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.sidebarPositionText {
+  font-size: 11px;
+  color: #888;
+  font-weight: normal;
+}
+
+.sidebarOuOver {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.sidebarOuUnder {
+  color: #e94560;
+  font-weight: bold;
+}
+
+/* ==========================================
+   SEARCH BAR STYLES
+   ========================================== */
+.searchBarWrapper {
+  position: relative;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.searchInput {
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 5px 0;
+  border-bottom: 2px solid #0f3460;
+  background: transparent;
+}
+
+.searchDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.searchDropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.searchDropdownItem:hover {
+  background: #f0f0f0;
+}
+
+.searchDropdownName {
+  font-weight: bold;
+  color: #333;
+}
+
+.searchDropdownInfo {
+  color: #888;
+  font-size: 14px;
+}
+
+/* ==========================================
+   TOOLBAR STYLES
+   ========================================== */
+.toolbar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 25px;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap;
+}
+
+.toolbarSelect {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toolbarSelectOver {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  background: #4caf50;
+}
+
+.toolbarSelectUnder {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  background: #e94560;
+}
+
+.toolbarLineInput {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  width: 80px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.toolbarPropSelect {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toolbarSearchBtn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: #0f3460;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbarOpponentInfo {
+  margin-left: auto;
+  font-size: 14px;
+  color: #666;
+}
+
+/* ==========================================
+   DEFENSE BOX STYLES
+   ========================================== */
+.defenseBox {
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: transparent;
+  border: 2px solid transparent;
+  min-width: 80px;
+}
+
+.defenseBoxActive {
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  border: 2px solid #333;
+  min-width: 80px;
+}
+
+.defenseBoxLabel {
+  font-size: 14px;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.defenseBoxValue {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.defenseBoxRank {
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.defenseBoxTrend {
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.defenseBoxTrendAvg {
+  font-size: 9px;
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+/* ==========================================
+   DEFENSE FILTER & LAYOUT STYLES
+   ========================================== */
+.defenseFilterWrapper {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.defenseFilterBtn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.defenseFilterBtnActive {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  background: #0f3460;
+  color: white;
+}
+
+.defenseFilterBtnInactive {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  background: #e0e0e0;
+  color: black;
+}
+
+.defenseRow {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.defenseRowBottom {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+.defenseLegend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.defenseLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.defenseLegendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.defenseLegendColorGreen {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  background: #4caf50;
+}
+
+.defenseLegendColorRed {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  background: #e94560;
+}
+
+.defenseLegendColorGray {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  background: #888888;
+}
+/* ==========================================
+  RIGHT-SIDE FILTERS COLUMN
+   ========================================== */
+.filtersColumn {
+  width: 450px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-top: 80px; /* Align roughly with the hit rates/chart area */
+  padding-left: 80px;
+  position: sticky; /* Keeps it visible while scrolling! */
+  top: 20px;
+  align-self: flex-start; /* Prevents it from stretching to the bottom */
+}
+
+.venueToggleGroup {
+  display: flex;
+  flex-direction: row; /* <-- Force horizontal layout */
+  width: 100%; /* Span the full 180px column width */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.venueToggleButton {
+  flex: 1;
+  padding: 8px 0;
+  background: white;
+  border: none;
+  border-right: 1px solid #ccc; /* Dividers between buttons */
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  text-align: center; /* Center text in the new wide space */
+  transition: all 0.2s;
+}
+
+.venueToggleButtonActive {
+  flex: 1; /* <-- MAGIC: Same equal space when active */
+  padding: 8px 0; /* <-- Taller buttons */
+  background: #0f3460;
+  border: none;
+  border-right: 1px solid #0f3460;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.venueToggleButtonActive:last-child,
+.venueToggleButton:last-child {
+  border-right: none;
+}
+.filterTitle {
+  margin: 0px;
+}
+
+.filterParagraph {
+  margin: 0px;
+  margin-top: -12px;
+  color: rgb(146, 140, 140);
 }

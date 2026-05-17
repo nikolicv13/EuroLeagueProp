@@ -34,9 +34,9 @@ import styles from "./PlayerPage.module.css";
 
 function parseMinutes(minStr: string): number {
   if (!minStr || minStr === "DNP") return 0;
-
   return parseFloat(minStr.replace(":", "."));
 }
+
 // Calculate hit rate from actual graph values
 function calculateHitRate(
   values: number[],
@@ -46,19 +46,17 @@ function calculateHitRate(
   if (values.length === 0) return { hits: 0, attempts: 0, rate: 0 };
 
   let hits = 0;
-
   for (const value of values) {
     if (selection === "over" && value > line) hits++;
     if (selection === "under" && value < line) hits++;
   }
 
-  // attempts = actual number of games in the array, NOT a hardcoded number!
   return { hits, attempts: values.length, rate: hits / values.length };
 }
+
 const CustomXTick = ({ x, y, payload, activeFilter }: CustomXTickProps) => {
   if (x === undefined || y === undefined || !payload?.value) return null;
 
-  // Split the combined value back into date and opponent
   const [dateStr, opponentId] = payload.value.split("|");
 
   if (activeFilter === "season" && opponentId) {
@@ -75,12 +73,9 @@ const CustomXTick = ({ x, y, payload, activeFilter }: CustomXTickProps) => {
 
   return (
     <g>
-      {/* Date Text */}
       <text x={x} y={y + 10} textAnchor="middle" fontSize={12} fill="#666">
         {dateStr}
       </text>
-
-      {/* Opponent Logo */}
       {opponentId && (
         <image
           href={`/logos/${opponentId}.png`}
@@ -93,6 +88,7 @@ const CustomXTick = ({ x, y, payload, activeFilter }: CustomXTickProps) => {
     </g>
   );
 };
+
 function DefenseBox({
   label,
   stat,
@@ -111,66 +107,30 @@ function DefenseBox({
   };
 
   const getTrendColor = (direction?: string) => {
-    if (direction === "worse") return "#4caf50"; // Green -> Defense is weaker, easier to hit OVER
-    if (direction === "better") return "#e94560"; // Red -> Defense is stronger, harder to hit OVER
-    return "#888"; // Grey -> About the same
+    if (direction === "worse") return "#4caf50";
+    if (direction === "better") return "#e94560";
+    return "#888";
   };
 
   const color = getColor(stat.label);
   const trendColor = getTrendColor(stat.trend_direction);
 
   return (
-    <div
-      style={{
-        textAlign: "center",
-        padding: "12px 20px",
-        borderRadius: "8px",
-        background: isActive ? "#f0f0f0" : "transparent",
-        border: isActive ? "2px solid #333" : "2px solid transparent",
-        minWidth: "80px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "14px",
-          fontWeight: "bold",
-          color: "#666",
-          marginBottom: "5px",
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ fontSize: "18px", fontWeight: "bold", color: "#333" }}>
-        {stat.avg}
-      </div>
+    <div className={isActive ? styles.defenseBoxActive : styles.defenseBox}>
+      <div className={styles.defenseBoxLabel}>{label}</div>
+      <div className={styles.defenseBoxValue}>{stat.avg}</div>
 
-      {/* Show Rank if available (always from season) */}
       {showRank && stat.rank && (
-        <div
-          style={{
-            fontSize: "11px",
-            color: color,
-            fontWeight: "bold",
-            marginTop: "4px",
-          }}
-        >
+        <div className={styles.defenseBoxRank} style={{ color: color }}>
           {stat.rank}
           {getOrdinal(stat.rank)}
         </div>
       )}
 
-      {/* Show Trend if available (L5 / L10) */}
       {stat.trend && stat.trend !== "0.0" && (
-        <div
-          style={{
-            fontSize: "11px",
-            color: trendColor,
-            fontWeight: "bold",
-            marginTop: "4px",
-          }}
-        >
+        <div className={styles.defenseBoxTrend} style={{ color: trendColor }}>
           {stat.trend} vs S
-          <span style={{ fontSize: "9px", marginLeft: "2px", opacity: 0.8 }}>
+          <span className={styles.defenseBoxTrendAvg}>
             (Avg: {stat.season_avg})
           </span>
         </div>
@@ -184,6 +144,7 @@ function getOrdinal(n: number) {
   const v = n % 100;
   return s[(v - 20) % 10] || s[v] || s[0];
 }
+
 // Format date to "Mar 13"
 function formatDate(dateStr: string) {
   if (!dateStr) return "";
@@ -321,6 +282,9 @@ export default function PlayerStats() {
   const [activeMetric, setActiveMetric] = useState<"minutes" | "fga" | "3pta">(
     "minutes",
   );
+  const [venueFilter, setVenueFilter] = useState<"all" | "home" | "away">(
+    "all",
+  );
   const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
   const [defenseLimit, setDefenseLimit] = useState<string>("season");
   const [inputMarket, setInputMarket] = useState(tip.market);
@@ -444,7 +408,6 @@ export default function PlayerStats() {
 
   // 6. Fetch Defense Stats
   useEffect(() => {
-    // Force TypeScript to see these as strings
     const opponentId: string = tip.opponent_team_id || "";
     const positionStr: string = tip.position || "";
 
@@ -465,14 +428,14 @@ export default function PlayerStats() {
 
     loadDefense();
   }, [tip.opponent_team_id, tip.position, defenseLimit]);
+
   useEffect(() => {
     const gameId = savedState?.game_id;
     if (!gameId) return;
 
-    // Add the type explicitly to the parameter
     async function loadGameTips(id: string) {
       try {
-        const tips = await fetchTips(id); // 'id' is now strictly a string
+        const tips = await fetchTips(id);
         setGameTips(tips);
       } catch (err) {
         console.error(err);
@@ -525,18 +488,41 @@ export default function PlayerStats() {
   const show3pta = tip.market === "points" || tip.market === "threes_made";
 
   const getBarColor = (value: number) => {
-    const sel = tip.selection || "over"; // Fallback to "over"
+    const sel = tip.selection || "over";
     if (sel === "over") {
       return value > tip.line ? "#4caf50" : "#e94560";
     }
     return value < tip.line ? "#4caf50" : "#e94560";
   };
+
+  // 1. Filter by Venue (Home / Away / Both)
+  // 1. Filter by Venue (Home / Away / Both)
+  const filterByVenue = (games: PlayerGameStat[]) => {
+    if (venueFilter === "all") return games;
+
+    return games.filter((game) => {
+      // Use the player's team FOR THAT SPECIFIC GAME (handles team changes!)
+      const playersTeamInThisGame = game.team_id;
+
+      // team_id_a is usually the Home team
+      const isHome = playersTeamInThisGame === game.team_id_a;
+
+      if (venueFilter === "home") return isHome;
+      if (venueFilter === "away") return !isHome;
+      return true;
+    });
+  };
+
+  const venueFilteredStats = filterByVenue(stats);
+  const venueFilteredH2H = filterByVenue(h2hStats);
+
+  // 2. Apply L5/L10/L15/Season/H2H on top of the venue-filtered stats
   const displayedStats =
     activeFilter === "h2h"
-      ? h2hStats
+      ? venueFilteredH2H
       : activeFilter === "season"
-        ? stats // ✅ All season games!
-        : stats.slice(-parseInt(activeFilter)); // L5, L10, L15
+        ? venueFilteredStats
+        : venueFilteredStats.slice(-parseInt(activeFilter));
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -558,7 +544,7 @@ export default function PlayerStats() {
 
   const handleSelectPlayer = (player: PlayerSearchResult) => {
     setSearchQuery(player.player_name);
-    setSelectedPlayerId(player.player_id); // <-- Save the ID locally
+    setSelectedPlayerId(player.player_id);
     setShowDropdown(false);
   };
 
@@ -570,22 +556,14 @@ export default function PlayerStats() {
     setInputOverUnder(tipItem.selection || "over");
     setPendingTipData(tipItem);
   };
+
   return (
     <div className={styles.pageLayout}>
       {/* ==========================================
-          LEFT SIDEBAR: Game Props 
+          LEFT SIDEBAR: Game Props
           ========================================== */}
       <div className={styles.sidebar}>
-        <h3
-          style={{
-            marginTop: 0,
-            fontSize: "14px",
-            color: "#666",
-            borderBottom: "1px solid #eee",
-            paddingBottom: "10px",
-          }}
-        >
-          {/* Fix: Added ?. and fallback strings */}
+        <h3 className={styles.sidebarTitle}>
           {savedState?.team_id || "Team"} vs{" "}
           {savedState?.opponent_team_id || "Opp"}
         </h3>
@@ -602,22 +580,17 @@ export default function PlayerStats() {
             >
               <div className={styles.sidebarPlayerName}>
                 {t.player}{" "}
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#888",
-                    fontWeight: "normal",
-                  }}
-                >
+                <span className={styles.sidebarPositionText}>
                   ({t.position})
                 </span>
               </div>
               <div className={styles.sidebarPropText}>
                 <span
-                  style={{
-                    color: t.selection === "over" ? "#4caf50" : "#e94560",
-                    fontWeight: "bold",
-                  }}
+                  className={
+                    t.selection === "over"
+                      ? styles.sidebarOuOver
+                      : styles.sidebarOuUnder
+                  }
                 >
                   {t.selection === "over" ? "O" : "U"}
                 </span>{" "}
@@ -630,6 +603,7 @@ export default function PlayerStats() {
           );
         })}
       </div>
+
       <div className={styles.mainContent}>
         <div className={styles.container}>
           {/* Back Button & Header */}
@@ -638,75 +612,30 @@ export default function PlayerStats() {
           </button>
 
           {/* PLAYER SEARCH BAR */}
-          <div
-            style={{
-              position: "relative",
-              marginBottom: "10px",
-              width: "100%",
-            }}
-          >
+          <div className={styles.searchBarWrapper}>
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // Hide dropdown when clicking away
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
               onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
               placeholder="Search player..."
-              style={{
-                fontSize: "24px",
-                fontWeight: "bold",
-                border: "none",
-                outline: "none",
-                width: "100%",
-                padding: "5px 0",
-                borderBottom: "2px solid #0f3460",
-                background: "transparent",
-              }}
+              className={styles.searchInput}
             />
 
             {/* Search Dropdown */}
             {showDropdown && searchResults.length > 0 && (
-              <ul
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "white",
-                  border: "1px solid #ccc",
-                  borderRadius: "8px",
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
-                  maxHeight: "250px",
-                  overflowY: "auto",
-                  zIndex: 1000,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                }}
-              >
+              <ul className={styles.searchDropdown}>
                 {searchResults.map((p) => (
                   <li
                     key={p.player_id}
                     onClick={() => handleSelectPlayer(p)}
-                    style={{
-                      padding: "10px 15px",
-                      cursor: "pointer",
-                      borderBottom: "1px solid #eee",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#f0f0f0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "white")
-                    }
+                    className={styles.searchDropdownItem}
                   >
-                    <span style={{ fontWeight: "bold", color: "#333" }}>
+                    <span className={styles.searchDropdownName}>
                       {p.player_name}
                     </span>
-                    <span style={{ color: "#888", fontSize: "14px" }}>
+                    <span className={styles.searchDropdownInfo}>
                       {p.team_id} | {p.position}
                     </span>
                   </li>
@@ -716,37 +645,20 @@ export default function PlayerStats() {
           </div>
 
           {/* ==========================================
-          NEW: INTERACTIVE PROP TOOLBAR 
+          NEW: INTERACTIVE PROP TOOLBAR
           ========================================== */}
-          <div
-            style={{
-              display: "flex",
-              gap: "15px",
-              alignItems: "center",
-              marginBottom: "25px",
-              padding: "15px",
-              background: "white",
-              borderRadius: "12px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-              flexWrap: "wrap",
-            }}
-          >
+          <div className={styles.toolbar}>
             {/* Over/Under Toggle */}
             <select
               value={inputOverUnder}
               onChange={(e) =>
                 setInputOverUnder(e.target.value as "over" | "under")
               }
-              style={{
-                padding: "8px 12px",
-                borderRadius: "6px",
-                border: "none",
-                fontWeight: "bold",
-                background: inputOverUnder === "over" ? "#4caf50" : "#e94560",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
+              className={
+                inputOverUnder === "over"
+                  ? styles.toolbarSelectOver
+                  : styles.toolbarSelectUnder
+              }
             >
               <option value="over">OVER</option>
               <option value="under">UNDER</option>
@@ -758,29 +670,14 @@ export default function PlayerStats() {
               step="1"
               value={inputLine}
               onChange={(e) => setInputLine(parseFloat(e.target.value))}
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-                fontWeight: "bold",
-                width: "80px",
-                textAlign: "center",
-                fontSize: "16px",
-              }}
+              className={styles.toolbarLineInput}
             />
 
             {/* Prop Type Dropdown */}
             <select
               value={inputMarket}
               onChange={(e) => setInputMarket(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-                fontWeight: "bold",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
+              className={styles.toolbarPropSelect}
             >
               <option value="points">Points</option>
               <option value="rebounds">Rebounds</option>
@@ -789,40 +686,23 @@ export default function PlayerStats() {
             </select>
 
             {/* SEARCH BUTTON */}
-            <button
-              onClick={handleSearch}
-              style={{
-                padding: "8px 20px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#0f3460",
-                color: "white",
-                fontWeight: "bold",
-                cursor: "pointer",
-                fontSize: "14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
+            <button onClick={handleSearch} className={styles.toolbarSearchBtn}>
               🔍 Search
             </button>
 
-            {/* Opponent Info (Static visual reference) */}
+            {/* Opponent Info */}
             {tip.opponent && (
-              <div
-                style={{ marginLeft: "auto", fontSize: "14px", color: "#666" }}
-              >
+              <div className={styles.toolbarOpponentInfo}>
                 vs {tip.opponent} | {tip.position || "N/A"}
               </div>
             )}
           </div>
-          {/* ========================================== */}
+
           <div className={styles.hitRatesContainer}>
             <HitRateBox
               label="L5"
               hr={calculateHitRate(
-                stats
+                venueFilteredStats
                   .slice(-5)
                   .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
                 tip.line,
@@ -832,7 +712,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="L10"
               hr={calculateHitRate(
-                stats
+                venueFilteredStats
                   .slice(-10)
                   .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
                 tip.line,
@@ -842,7 +722,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="L15"
               hr={calculateHitRate(
-                stats
+                venueFilteredStats
                   .slice(-15)
                   .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
                 tip.line,
@@ -852,18 +732,17 @@ export default function PlayerStats() {
             <HitRateBox
               label="Season"
               hr={calculateHitRate(
-                stats.map(
+                venueFilteredStats.map(
                   (s) => s[marketKey() as keyof PlayerGameStat] as number,
-                ), // ALL games!
+                ),
                 tip.line,
                 tip.selection,
               )}
             />
-            {/* H2H now calculates dynamically from h2hStats! */}
             <HitRateBox
               label={`VS ${tip.opponent_team_id}`}
               hr={calculateHitRate(
-                h2hStats.map(
+                venueFilteredH2H.map(
                   (s) => s[marketKey() as keyof PlayerGameStat] as number,
                 ),
                 tip.line,
@@ -873,20 +752,26 @@ export default function PlayerStats() {
           </div>
 
           {/* Game Filter Buttons */}
-          <div className={styles.filterButtons}>
-            {(["5", "10", "15", "season", "h2h"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`${styles.filterButton} ${
-                  activeFilter === f ? styles.filterButtonActive : ""
-                }`}
-              >
-                {f === "h2h" ? "H2H" : f === "season" ? "Season" : `Last ${f}`}
-              </button>
-            ))}
+          <div className={styles.filterRow}>
+            {/* LEFT SIDE: Graph Length Filters */}
+            <div className={styles.filterButtons}>
+              {(["5", "10", "15", "season", "h2h"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`${styles.filterButton} ${
+                    activeFilter === f ? styles.filterButtonActive : ""
+                  }`}
+                >
+                  {f === "h2h"
+                    ? "H2H"
+                    : f === "season"
+                      ? "Season"
+                      : `Last ${f}`}
+                </button>
+              ))}
+            </div>
           </div>
-
           {/* MAIN CHART: Market Stats */}
           <div className={styles.chartContainer}>
             <h3 className={styles.chartTitle}>{marketLabel()} per Game</h3>
@@ -896,9 +781,8 @@ export default function PlayerStats() {
                 <XAxis
                   dataKey="dateFormatted"
                   tick={<CustomXTick activeFilter={activeFilter} />}
-                  interval={0} // Forces all labels to show
-                  height={50} // Make room for the logo
-                  angle={activeFilter === "season" ? 0 : 0}
+                  interval={0}
+                  height={50}
                 />
                 <YAxis />
                 <Tooltip
@@ -932,7 +816,6 @@ export default function PlayerStats() {
                   }}
                 >
                   {displayedStats.map((entry, index) => {
-                    // Get the stat value for this specific game
                     const value = entry[
                       marketKey() as keyof PlayerGameStat
                     ] as number;
@@ -1036,27 +919,24 @@ export default function PlayerStats() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
           {/* Defense Filter Buttons */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+          <div className={styles.defenseFilterWrapper}>
             {["5", "10", "season"].map((f) => (
               <button
                 key={f}
                 onClick={() => setDefenseLimit(f)}
-                style={{
-                  padding: "6px 14px",
-                  background: defenseLimit === f ? "#0f3460" : "#e0e0e0",
-                  color: defenseLimit === f ? "white" : "black",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  fontSize: "13px",
-                }}
+                className={
+                  defenseLimit === f
+                    ? styles.defenseFilterBtnActive
+                    : styles.defenseFilterBtnInactive
+                }
               >
                 {f === "season" ? "Season" : `Last ${f}`}
               </button>
             ))}
           </div>
+
           {/* OPPONENT DEFENSE RANKINGS */}
           {defenseData &&
             defenseData.stats &&
@@ -1068,14 +948,7 @@ export default function PlayerStats() {
                 </h3>
 
                 {/* TOP ROW: PTS, REB, AST */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-around",
-                    marginBottom: "10px",
-                    gap: "10px",
-                  }}
-                >
+                <div className={styles.defenseRow}>
                   <DefenseBox
                     label="PTS"
                     stat={defenseData.stats.points}
@@ -1097,13 +970,7 @@ export default function PlayerStats() {
                 </div>
 
                 {/* BOTTOM ROW: 3PT, STL, BLK */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-around",
-                    gap: "10px",
-                  }}
-                >
+                <div className={styles.defenseRowBottom}>
                   <DefenseBox
                     label="3PT"
                     stat={defenseData.stats.threes}
@@ -1125,75 +992,65 @@ export default function PlayerStats() {
                 </div>
 
                 {/* LEGEND */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "20px",
-                    marginTop: "20px",
-                    padding: "10px",
-                    background: "#f9f9f9",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: "12px",
-                        height: "12px",
-                        background: "#4caf50",
-                        borderRadius: "3px",
-                        display: "inline-block",
-                      }}
-                    ></span>
+                <div className={styles.defenseLegend}>
+                  <div className={styles.defenseLegendItem}>
+                    <span className={styles.defenseLegendColorGreen}></span>
                     <span>Weak = Green (Bad defense, easier to score)</span>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: "12px",
-                        height: "12px",
-                        background: "#e94560",
-                        borderRadius: "3px",
-                        display: "inline-block",
-                      }}
-                    ></span>
+                  <div className={styles.defenseLegendItem}>
+                    <span className={styles.defenseLegendColorRed}></span>
                     <span>Strong = Red (Good defense, harder to score)</span>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: "12px",
-                        height: "12px",
-                        background: "#888888",
-                        borderRadius: "3px",
-                        display: "inline-block",
-                      }}
-                    ></span>
+                  <div className={styles.defenseLegendItem}>
+                    <span className={styles.defenseLegendColorGray}></span>
                     <span>Average = Gray</span>
                   </div>
                 </div>
               </div>
             )}
+        </div>
+        <div className={styles.filtersColumn}>
+          {/* Venue Toggle (Home / Away / Both) */}
+          <h3 className={styles.filterTitle}>Home/Away</h3>
+          <p className={styles.filterParagraph}>Filter stats by home or away</p>
+          <div className={styles.venueToggleGroup}>
+            <button
+              onClick={() => setVenueFilter("all")}
+              className={
+                venueFilter === "all"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              Both
+            </button>
+            <button
+              onClick={() => setVenueFilter("home")}
+              className={
+                venueFilter === "home"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              Home
+            </button>
+            <button
+              onClick={() => setVenueFilter("away")}
+              className={
+                venueFilter === "away"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              Away
+            </button>
+          </div>
+
+          {/* 
+            Future filters go right here! 
+            They will stack perfectly below Home/Away/Both.
+            e.g., <div className={styles.seasonToggleGroup}>...</div>
+          */}
         </div>
       </div>
     </div>
