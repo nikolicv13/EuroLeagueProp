@@ -53,6 +53,20 @@ function teamLogoUrl(teamId: string | number) {
   return `/logos/${teamId}.png`;
 }
 
+function formatStartTime(isoString: string) {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Europe/Belgrade", // <-- This forces it to show CET/CEST (Euroleague time)
+    });
+  } catch {
+    return isoString;
+  }
+}
+
 function marketLabel(market: TipLike["market"]) {
   switch (market) {
     case "points":
@@ -105,8 +119,8 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
   const rating = ratingFromScore(tip.score);
   const navigate = useNavigate();
 
-  const matchupLeft = tip.team_abbr ?? tip.team;
-  const matchupRight = tip.opponent_abbr ?? tip.opponent;
+  const matchupLeft = tip.team_abbr ?? tip.team_id;
+  const matchupRight = tip.opponent_abbr ?? tip.opponent_team_id;
 
   const offers: OddsOffer[] = tip.odds_offers?.length
     ? tip.odds_offers
@@ -143,10 +157,10 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
 
         <div className={styles.ppHeaderRight}>
           <div className={styles.ppMatchup}>
-            {matchupLeft} @ {matchupRight}
+            {matchupLeft} vs {matchupRight}
           </div>
           <div className={styles.ppDate}>
-            {dateLabel} · {tip.start_time}
+            {dateLabel} · {formatStartTime(tip.start_time)}
           </div>
         </div>
       </header>
@@ -160,7 +174,10 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
           <StatBox label="L5" hr={tip.hit_rates.last5} />
           <StatBox label="L10" hr={tip.hit_rates.last10} />
           <StatBox label="L15" hr={tip.hit_rates.last15} />
-          <StatBox label={`VS ${matchupRight}`} hr={tip.hit_rates.vs_opp} />
+          <StatBox
+            label={`VS ${tip.opponent_abbr ?? tip.opponent_team_id}`}
+            hr={tip.hit_rates.vs_opp}
+          />
         </div>
       </section>
 
@@ -194,7 +211,19 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
           className={`${styles.ppActionBtn} ${styles.ppActionBtnPrimary}`}
           type="button"
           onClick={() => {
-            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${tip.opponent_team_id}&oppName=${encodeURIComponent(tip.opponent)}&teamId=${tip.team_id}&position=${tip.position}&season=E2025`; // <-- ADD THIS
+            // Create safe fallbacks so we NEVER send actual nulls
+            const oppTeamId =
+              tip.opponent_team_id || tip.opponent_abbr || "UNK";
+            const oppName =
+              tip.opponent ||
+              tip.opponent_abbr ||
+              tip.opponent_team_id ||
+              "Opponent";
+            const pos = tip.position || "UNK";
+            const teamId = tip.team_id || "UNK";
+
+            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=E2025`;
+
             navigate(url, { state: tip });
           }}
         >

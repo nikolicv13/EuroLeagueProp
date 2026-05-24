@@ -10,12 +10,14 @@ import {
   fetchPlayerSearch,
   fetchPlayerStats,
   fetchTips,
+  fetchSimilarPlayers,
 } from "../api/api";
 import type {
   PlayerGameStat,
   CustomXTickProps,
   DefenseRankings,
   DefenseStatRank,
+  SimilarPlayer,
   PlayerSearchResult,
   Tip,
 } from "../api/api";
@@ -252,28 +254,30 @@ export default function PlayerStats() {
       };
     } | null,
   );
+  const getParam = (key: string, fallback: string) => {
+    const val = searchParams.get(key);
+    return val && val !== "null" ? val : fallback;
+  };
 
   // 2. Merge URL params with SAVED State (URL wins for prop/line/overUnder)
   const tip = {
     ...savedState,
     player_id: playerId || savedState?.player_id || "",
-    market: searchParams.get("propType") || savedState?.market || "points",
+    market: getParam("propType", savedState?.market || "points"),
     line: parseFloat(
-      searchParams.get("propAmount") || String(savedState?.line || "10.5"),
+      getParam("propAmount", String(savedState?.line || "10.5")),
     ),
-    selection: (searchParams.get("overUnder") ||
-      savedState?.selection ||
-      "over") as "over" | "under",
-    opponent_team_id:
-      searchParams.get("oppTeam") || savedState?.opponent_team_id || "",
-    opponent: searchParams.get("oppName")
-      ? decodeURIComponent(searchParams.get("oppName")!)
+    selection: getParam("overUnder", savedState?.selection || "over") as
+      | "over"
+      | "under",
+    opponent_team_id: getParam("oppTeam", savedState?.opponent_team_id || ""),
+    opponent: getParam("oppName", "")
+      ? decodeURIComponent(getParam("oppName", ""))
       : savedState?.opponent || "",
-    team_id: searchParams.get("teamId") || savedState?.team_id || "",
-    position: searchParams.get("position") || savedState?.position || "",
-    season: searchParams.get("season") || savedState?.season_code || "E2025",
+    team_id: getParam("teamId", savedState?.team_id || ""),
+    position: getParam("position", savedState?.position || ""),
+    season: getParam("season", savedState?.season_code || "E2025"),
   };
-
   const [stats, setStats] = useState<PlayerGameStat[]>([]);
   const [h2hStats, setH2hStats] = useState<PlayerGameStat[]>([]);
   const [activeFilter, setActiveFilter] = useState<
@@ -291,6 +295,7 @@ export default function PlayerStats() {
   ]);
   const [defenseData, setDefenseData] = useState<DefenseRankings | null>(null);
   const [defenseLimit, setDefenseLimit] = useState<string>("season");
+  const [similarPlayers, setSimilarPlayers] = useState<SimilarPlayer[]>([]);
   const [inputMarket, setInputMarket] = useState(tip.market);
   const [inputLine, setInputLine] = useState(tip.line);
   const [inputOverUnder, setInputOverUnder] = useState(tip.selection);
@@ -428,7 +433,13 @@ export default function PlayerStats() {
     const opponentId: string = tip.opponent_team_id || "";
     const positionStr: string = tip.position || "";
 
-    if (!opponentId || !positionStr) return;
+    if (
+      !opponentId ||
+      !positionStr ||
+      opponentId === "UNK" ||
+      positionStr === "UNK"
+    )
+      return;
 
     async function loadDefense() {
       try {
@@ -461,6 +472,38 @@ export default function PlayerStats() {
 
     loadGameTips(gameId);
   }, [savedState?.game_id]);
+
+  // 7. Fetch Similar Players
+
+  useEffect(() => {
+    const opponentId = tip.opponent_team_id;
+    const positionStr = tip.position;
+    const market = tip.market;
+
+    if (
+      !opponentId ||
+      !positionStr ||
+      opponentId === "UNK" ||
+      positionStr === "UNK"
+    )
+      return;
+
+    async function loadSimilarPlayers() {
+      try {
+        const data = await fetchSimilarPlayers(
+          opponentId,
+          positionStr,
+          market,
+          tip.line,
+        );
+        setSimilarPlayers(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadSimilarPlayers();
+  }, [tip.opponent_team_id, tip.position, tip.market, tip.line]);
 
   if (!tip) {
     return (
@@ -708,9 +751,10 @@ export default function PlayerStats() {
             </button>
 
             {/* Opponent Info */}
-            {tip.opponent && (
+            {(tip.opponent || tip.opponent_team_id) && (
               <div className={styles.toolbarOpponentInfo}>
-                vs {tip.opponent} | {tip.position || "N/A"}
+                vs {tip.opponent || tip.opponent_team_id} |{" "}
+                {tip.position || "N/A"}
               </div>
             )}
           </div>
@@ -961,7 +1005,8 @@ export default function PlayerStats() {
             tip.position && (
               <div className={styles.defenseContainer}>
                 <h3 className={styles.defenseTitle}>
-                  {tip.opponent} Defense vs {tip.position || "All"} Position
+                  {tip.opponent || tip.opponent_team_id} Defense vs{" "}
+                  {tip.position || "All"} Position
                 </h3>
 
                 {/* TOP ROW: PTS, REB, AST */}
@@ -1023,6 +1068,57 @@ export default function PlayerStats() {
                     <span>Average = Gray</span>
                   </div>
                 </div>
+              </div>
+            )}
+          {/* SIMILAR PLAYERS PERFORMANCE */}
+          {similarPlayers.length > 0 &&
+            tip.opponent_team_id &&
+            tip.position && (
+              <div className={styles.similarPlayersContainer}>
+                <h3 className={styles.similarPlayersTitle}>
+                  Similar {tip.position || "Player"}s vs{" "}
+                  {tip.opponent || tip.opponent_team_id} (Last 10)
+                </h3>
+
+                {similarPlayers.map((p) => {
+                  const isOver =
+                    parseFloat(String(p.game_stat)) >=
+                    parseFloat(String(p.avg_stat));
+                  const dateFormatted = new Date(p.date).toLocaleDateString(
+                    "en-US",
+                    { month: "short", day: "numeric" },
+                  );
+
+                  return (
+                    <div key={p.player_id} className={styles.similarPlayerRow}>
+                      <div className={styles.similarPlayerInfo}>
+                        <img
+                          className={styles.similarPlayerTeamLogo}
+                          src={`/logos/${p.team_id}.png`}
+                          alt={p.team_id}
+                        />
+                        <span className={styles.similarPlayerName}>
+                          {p.player}
+                        </span>
+                      </div>
+
+                      <div className={styles.similarPlayerStats}>
+                        <span className={styles.similarPlayerAvg}>
+                          Avg: {parseFloat(String(p.avg_stat)).toFixed(1)}
+                        </span>
+                        <span
+                          className={
+                            isOver
+                              ? styles.similarPlayerGameStatOver
+                              : styles.similarPlayerGameStatUnder
+                          }
+                        >
+                          {isOver ? "▲" : "▼"} {p.game_stat} ({dateFormatted})
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
         </div>

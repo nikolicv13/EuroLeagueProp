@@ -14,11 +14,6 @@
   border-right: 1px solid #e0e0e0;
 }
 
-.sidebarTitle {
-  margin-top: 0;
-  font-size: 18px;
-}
-
 .sidebarSelect {
   width: 100%;
   padding: 12px;
@@ -40,7 +35,95 @@
   color: #aaa;
   font-size: 14px;
 }
+.modeButton:hover {
+  background: #d5d5d5;
+}
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+  margin-top: 5px;
+}
 
+.filterLabel {
+  font-size: 12px;
+  font-weight: bold;
+  color: #666;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.filterInput,
+.filterSelect {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: white;
+  color: #333;
+}
+
+.filterSelect option {
+  background: white;
+  color: #333;
+}
+
+.modeButtonActiveOdds {
+  background: #4caf50;
+  color: white;
+}
+
+.modeButtonActiveOdds:hover {
+  background: #45a049;
+}
+
+.modeButtonActiveDb {
+  background: #2196f3;
+  color: white;
+}
+
+.modeButtonActiveDb:hover {
+  background: #1e88e5;
+}
+.statusSuccess {
+  font-size: 11px;
+  color: #4caf50;
+  font-weight: bold;
+  margin: 0;
+}
+
+.statusError {
+  font-size: 12px;
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 0;
+}
+
+/* Mode Toggle Buttons */
+.modeToggleContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.modeButton {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #e0e0e0;
+  color: #333;
+  font-weight: bold;
+  font-size: 13px;
+  transition: all 0.2s;
+}
 /* RIGHT MAIN AREA */
 .mainContent {
   flex: 1;
@@ -62,4 +145,305 @@
   margin: 0 auto;
   width: 100%;
   transform: translateX(-140px);
+}
+.loadingText {
+  text-align: center;
+  margin-top: 50px;
+  color: #666;
+  font-size: 16px;
+}
+
+.emptyText {
+  text-align: center;
+  margin-top: 50px;
+  color: #999;
+  font-size: 15px;
+}
+
+/* Search input */
+.searchInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+/* Stats summary */
+.statsSummary {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.statsSummary p {
+  margin: 3px 0;
+}
+
+/* Manual input styles */
+.manualLabel {
+  font-size: 12px;
+  font-weight: bold;
+  color: #666;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.manualInput {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  margin-bottom: 5px;
+  box-sizing: border-box;
+}
+
+.manualButton {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  background: #ff9800;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.manualButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Loading spinner */
+.loadingSpinner {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* No tips message */
+.noTips {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.noTips button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ==========================================
+   PAGINATION STYLES
+   ========================================== */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin: 20px 0;
+  padding: 10px;
+}
+
+.paginationButton {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paginationButton:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+.paginationButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginationButtonActive {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+  font-weight: bold;
+}
+
+.paginationButtonActive:hover {
+  background: #45a049;
+}
+
+.paginationEllipsis {
+  border: none;
+  background: transparent;
+  cursor: default;
+  color: #999;
+}
+
+/* Results count */
+.resultsCount {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  padding: 5px 0 20px;
+}
+
+/* Data source indicator */
+.dataSourceIndicator {
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Data source buttons */
+.dataSourceButtons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.button {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.activeButton {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #4caf50;
+  border-radius: 6px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.activeButton:hover {
+  background: #45a049;
+}
+
+/* Make sure sidebar scrolls if needed */
+.sidebar {
+  overflow-y: auto;
+  max-height: calc(100vh - 20px);
+  padding-right: 10px;
+}
+
+.sidebarSelect {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 15px;
+  background: white;
+}
+
+.sidebarTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 15px 0 8px;
+}
+
+.sidebarTitle:first-child {
+  margin-top: 0;
+}
+
+/* ==========================================
+   PAGINATION (FIXED CENTERING)
+   ========================================== */
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 30px auto 20px auto; /* Centers it perfectly under the tipsList */
+  width: 100%;
+  max-width: 600px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  transform: translateX(-140px);
+}
+
+.paginationBtn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+.paginationBtnDisabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: #aaa;
+  border-color: #e0e0e0;
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #666;
+  font-weight: bold;
+  min-width: 100px;
+  text-align: center;
 }

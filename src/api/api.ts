@@ -64,6 +64,16 @@ export interface DefenseVsPosition {
   } | null;
 }
 
+export interface SimilarPlayer {
+  player_id: string;
+  player: string;
+  team_id: string;
+  game_stat: number;
+  avg_stat: number;
+  date: string;
+}
+
+
 export interface Tip {
   id: string;
   game_id: string;
@@ -187,5 +197,25 @@ export async function fetchPlayerSearch(
 ): Promise<PlayerSearchResult[]> {
   const res = await fetch(`${API_URL}/players/search?q=${query}`);
   if (!res.ok) throw new Error("Search failed");
+  return res.json();
+}
+
+export async function fetchSimilarPlayers(
+  opponentId: string, 
+  position: string, 
+  market: string,
+  targetAvg?: number
+): Promise<SimilarPlayer[]> {
+  let url = `${API_URL}/similar-players/${opponentId}/${position}/${market}`;
+  if (targetAvg) url += `?targetAvg=${targetAvg}`;
+  
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch similar players");
+  return res.json();
+}
+
+export async function fetchBrazilBetOdds(leagueId: string): Promise<Tip[]> {
+  const res = await fetch(`${API_URL}/odds/brazilbet/${leagueId}`);
+  if (!res.ok) throw new Error("Failed to fetch BrazilBet odds");
   return res.json();
 }

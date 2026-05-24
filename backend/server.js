@@ -1,12 +1,19 @@
 import express from "express";
 import cors from "cors";
 import pool from "./db.js";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
+const USE_MOCK_ODDS = true;
 
 // ==========================================
 // ROUTE 1: Test Route (keep this from before)
@@ -240,6 +247,34 @@ app.get("/api/tips/:gameId", async (req, res) => {
       playerGames[bs.player_id].push(bs);
     }
 
+    // ==========================================
+    // FIX: BATCH FETCH H2H DATA (No more N+1!)
+    // ==========================================
+    // Get all H2H games for ALL players against BOTH teams in this matchup
+    const h2hAllRes = await pool.query(
+      `SELECT 
+        bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+        bs.three_points_made, bs.minutes, g.date, bs.team_id, 
+        g.team_id_a, g.team_id_b
+      FROM box_scores bs
+      JOIN games g ON bs.game_id = g.game_id
+      WHERE bs.player_id = ANY($1)
+        AND bs.minutes != 'DNP'
+        AND (
+          (g.team_id_a = $2 OR g.team_id_b = $2) OR 
+          (g.team_id_a = $3 OR g.team_id_b = $3)
+        )
+      ORDER BY g.date DESC`,
+      [allPlayerIds, game.team_id_a, game.team_id_b],
+    );
+
+    // Group H2H games by player_id for O(1) lookup
+    const h2hMap = {};
+    for (const row of h2hAllRes.rows) {
+      if (!h2hMap[row.player_id]) h2hMap[row.player_id] = [];
+      h2hMap[row.player_id].push(row);
+    }
+
     // 4. Build the Tips
     const tips = [];
 
@@ -290,21 +325,19 @@ app.get("/api/tips/:gameId", async (req, res) => {
         const last10HR = calcHitRate(games.slice(0, 10));
         const last15HR = calcHitRate(games.slice(0, 15));
 
-        // Use the pre-fetched H2H games for this specific player
-        const h2hRes = await pool.query(
-          `SELECT 
-            bs.points, bs.assists, bs.total_rebounds, 
-            bs.three_points_made, bs.minutes, g.date
-          FROM box_scores bs
-          JOIN games g ON bs.game_id = g.game_id
-          WHERE bs.player_id = $1
-            AND bs.minutes != 'DNP'
-            AND bs.team_id != $2  -- Player was NOT on the opponent team
-            AND (g.team_id_a = $2 OR g.team_id_b = $2)  -- Opponent was in this game
-          ORDER BY g.date DESC`,
-          [p.player_id, opponentTeamId],
+        // ==========================================
+        // FIX: USE THE MAP INSTEAD OF A NEW QUERY
+        // ==========================================
+        const allPlayerH2H = h2hMap[p.player_id] || [];
+
+        // Filter the pre-fetched games to only include games against the specific opponent
+        const h2hGames = allPlayerH2H.filter(
+          (g) =>
+            (g.team_id_a === opponentTeamId ||
+              g.team_id_b === opponentTeamId) &&
+            g.team_id !== opponentTeamId, // Player was NOT on the opponent team
         );
-        const h2hGames = h2hRes.rows;
+
         const vsOppHR = calcHitRate(h2hGames);
 
         const minutesWeight = Math.min(parseFloat(p.minutes_per_game) / 30, 1);
@@ -334,7 +367,6 @@ app.get("/api/tips/:gameId", async (req, res) => {
             last15: last15HR,
             vs_opp: {
               ...vsOppHR,
-              // Attach the actual all-time games here so your graph can use them!
               games: h2hGames.map((g) => ({
                 date: g.date,
                 value: parseFloat(g[m.key]) || 0,
@@ -619,6 +651,98 @@ app.get("/api/players/:id/info", async (req, res) => {
 });
 
 // ==========================================
+// ROUTE 7: Similar Players Performance
+// ==========================================
+app.get(
+  "/api/similar-players/:opponentId/:position/:market",
+  async (req, res) => {
+    try {
+      const { opponentId, position, market } = req.params;
+      const targetAvg = parseFloat(req.query.targetAvg) || 10;
+
+      // 1. Define similar positions
+      const posMap = {
+        PG: ["PG", "SG"],
+        SG: ["PG", "SG"],
+        SF: ["SF", "PF"],
+        PF: ["SF", "PF", "C"],
+        C: ["PF", "C"],
+      };
+      const positions = posMap[position] || [position];
+
+      // 2. Map frontend market names to DB columns
+      const statMap = {
+        points: { col: "points", avg: "points_per_game" },
+        rebounds: { col: "total_rebounds", avg: "total_rebounds_per_game" },
+        assists: { col: "assists", avg: "assists_per_game" },
+        threes_made: {
+          col: "three_points_made",
+          avg: "three_points_made_per_game",
+        },
+      };
+
+      const stat = statMap[market];
+      if (!stat) return res.json([]);
+
+      // 3. Fetch top players per game, filtered by similar average
+      const query = `
+      WITH matched_players AS (
+        SELECT player_id FROM players WHERE position = ANY($1::text[])
+      ),
+      parsed_stats AS (
+        SELECT 
+          bs.player_id,
+          bs.player,
+          bs.team_id,
+          bs.${stat.col}::numeric as game_stat,
+          g.game_id,
+          g.date,
+          CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) as mins_played,
+          ROW_NUMBER() OVER(PARTITION BY g.game_id ORDER BY CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) DESC) as game_rn
+        FROM box_scores bs
+        JOIN games g ON bs.game_id = g.game_id
+        JOIN matched_players mp ON bs.player_id = mp.player_id
+        WHERE (g.team_id_a = $2 OR g.team_id_b = $2)
+          AND bs.team_id != $2
+          AND bs.minutes != 'DNP'
+      ),
+      filtered_stats AS (
+        SELECT 
+          ps.player_id,
+          ps.player,
+          ps.team_id,
+          ps.game_stat,
+          ps.date,
+          pss.${stat.avg}::numeric as avg_stat
+        FROM parsed_stats ps
+        JOIN player_season_stats pss 
+          ON ps.player_id = pss.player_id 
+          AND ps.team_id = pss.team_id 
+          AND pss.season_code = 'E2025'
+        WHERE ps.game_rn <= 2
+          AND pss.${stat.avg} >= $3 * 0.6
+          AND pss.${stat.avg} <= $3 * 1.4
+      )
+      SELECT 
+        player_id, player, team_id, game_stat, date, avg_stat
+      FROM filtered_stats
+      ORDER BY date DESC
+      LIMIT 10;
+    `;
+
+      const result = await pool.query(query, [
+        positions,
+        opponentId,
+        targetAvg,
+      ]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("SQL Error:", error);
+      res.status(500).json({ error: "Failed to fetch similar players" });
+    }
+  },
+);
+// ==========================================
 // ROUTE 8: Search Players
 // ==========================================
 app.get("/api/players/search", async (req, res) => {
@@ -643,427 +767,443 @@ app.get("/api/players/search", async (req, res) => {
 });
 
 // ==========================================
-// ROUTE 10: Fetch Player Props from BrazilBet
-// ==========================================
-// app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
-//   const { leagueId } = req.params;
-
-//   try {
-//     const url = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/league/${leagueId}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
-
-//     const response = await fetch(url);
-//     if (!response.ok) throw new Error("Failed to fetch from BrazilBet");
-
-//     const data = await response.json();
-
-//     if (!data.esMatches || data.esMatches.length === 0) {
-//       return res.json([]); // No matches available
-//     }
-
-//     const tips = [];
-
-//     for (const match of data.esMatches) {
-//       const playerName = match.home;
-//       const opponentName = match.away;
-//       const gameId = String(match.id);
-//       const startTime = new Date(match.kickOffTime).toISOString();
-//       const params = match.params || {};
-//       const odds = match.odds || {};
-
-//       // Helper to get the Over odds (fallback to 1.90 if mapping is unclear)
-//       const getOverOdds = () => {
-//         const oddsValues = Object.values(odds);
-//         return oddsValues.length > 0 ? oddsValues[0] : 1.9;
-//       };
-
-//       // Parse POINTS
-//       if (params.ouPlPoints) {
-//         const line = parseFloat(params.ouPlPoints);
-//         tips.push({
-//           id: `${gameId}_${playerName}_points`,
-//           game_id: gameId,
-//           start_time: startTime,
-//           player_id: `BET_${playerName.replace(/\s/g, "_")}`,
-//           player: playerName,
-//           team_id: "TBD",
-//           team: playerName, // In this API, 'home' is the player
-//           opponent_team_id: "TBD",
-//           opponent: opponentName, // 'away' is the team
-//           position: "G", // API doesn't provide position
-//           market: "points",
-//           selection: "over",
-//           line: line,
-//           odds: getOverOdds(),
-//           hit_rates: {
-//             season: { hits: 0, attempts: 0, rate: 0 },
-//             last5: { hits: 0, attempts: 0, rate: 0 },
-//             last10: { hits: 0, attempts: 0, rate: 0 },
-//             last15: { hits: 0, attempts: 0, rate: 0 },
-//             vs_opp: { hits: 0, attempts: 0, rate: 0 },
-//           },
-//           score: 50,
-//         });
-//       }
-
-//       // Parse ASSISTS
-//       if (params.ouPlAssists) {
-//         const line = parseFloat(params.ouPlAssists);
-//         tips.push({
-//           id: `${gameId}_${playerName}_assists`,
-//           game_id: gameId,
-//           start_time: startTime,
-//           player_id: `BET_${playerName.replace(/\s/g, "_")}`,
-//           player: playerName,
-//           team_id: "TBD",
-//           team: playerName,
-//           opponent_team_id: "TBD",
-//           opponent: opponentName,
-//           position: "G",
-//           market: "assists",
-//           selection: "over",
-//           line: line,
-//           odds: getOverOdds(),
-//           hit_rates: {
-//             season: { hits: 0, attempts: 0, rate: 0 },
-//             last5: { hits: 0, attempts: 0, rate: 0 },
-//             last10: { hits: 0, attempts: 0, rate: 0 },
-//             last15: { hits: 0, attempts: 0, rate: 0 },
-//             vs_opp: { hits: 0, attempts: 0, rate: 0 },
-//           },
-//           score: 50,
-//         });
-//       }
-
-//       // Parse REBOUNDS (if available, usually ouPlRebounds)
-//       if (params.ouPlRebounds) {
-//         const line = parseFloat(params.ouPlRebounds);
-//         tips.push({
-//           id: `${gameId}_${playerName}_rebounds`,
-//           game_id: gameId,
-//           start_time: startTime,
-//           player_id: `BET_${playerName.replace(/\s/g, "_")}`,
-//           player: playerName,
-//           team_id: "TBD",
-//           team: playerName,
-//           opponent_team_id: "TBD",
-//           opponent: opponentName,
-//           position: "G",
-//           market: "rebounds",
-//           selection: "over",
-//           line: line,
-//           odds: getOverOdds(),
-//           hit_rates: {
-//             season: { hits: 0, attempts: 0, rate: 0 },
-//             last5: { hits: 0, attempts: 0, rate: 0 },
-//             last10: { hits: 0, attempts: 0, rate: 0 },
-//             last15: { hits: 0, attempts: 0, rate: 0 },
-//             vs_opp: { hits: 0, attempts: 0, rate: 0 },
-//           },
-//           score: 50,
-//         });
-//       }
-//     }
-
-//     res.json(tips);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({
-//       error: "Failed to fetch BrazilBet odds",
-//       details: error.message,
-//     });
-//   }
-// });
-
-// ==========================================
 // ROUTE 10: Fetch Expanded Props from BrazilBet
 // ==========================================
-// app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
-//   const { leagueId } = req.params;
+app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
+  // ===== MOCK MODE =====
+  if (USE_MOCK_ODDS) {
+    try {
+      // Read the saved file and return it instantly
+      const filePath = path.join(__dirname, "mocks", "brazilbet_odds_2.json");
+      const mockData = fs.readFileSync(filePath, "utf8");
+      return res.json(JSON.parse(mockData));
+    } catch (error) {
+      console.error("Error reading mock file:", error);
+      return res
+        .status(500)
+        .json({ error: "Mock data file not found or invalid" });
+    }
+  }
 
-//   try {
-//     // 1. Fetch League Data (gets all players/matches)
-//     const leagueUrl = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/league/${leagueId}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
-//     const leagueRes = await fetch(leagueUrl);
-//     if (!leagueRes.ok) throw new Error("Failed to fetch league data");
-//     const leagueData = await leagueRes.json();
+  const { leagueId } = req.params;
 
-//     if (!leagueData.esMatches || leagueData.esMatches.length === 0)
-//       return res.json([]);
+  try {
+    // 1. Fetch League Data
+    const leagueUrl = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/league/${leagueId}/mob?annex=51&mobileVersion=2.47.9.2&locale=sr`;
+    const leagueRes = await fetch(leagueUrl);
+    if (!leagueRes.ok) throw new Error("Failed to fetch league data");
+    const leagueData = await leagueRes.json();
 
-//     // 2. Fetch Match Details for ALL matches concurrently
-//     const detailPromises = leagueData.esMatches.map(async (match) => {
-//       try {
-//         // Assuming the match detail URL uses /match/{matchId}/
-//         const detailUrl = `https://www.brazilbet.rs/restapi/offer/sr/sport/SK/match/${match.id}/mob?annex=51&desktopVersion=2.44.9.7&locale=sr`;
-//         const detailRes = await fetch(detailUrl);
-//         if (!detailRes.ok) return match; // Fallback to league data if detail fails
-//         return await detailRes.json();
-//       } catch (err) {
-//         return match; // Fallback
-//       }
-//     });
+    if (!leagueData.esMatches || leagueData.esMatches.length === 0)
+      return res.json([]);
 
-//     const detailedMatches = await Promise.all(detailPromises);
+    // 2. Fetch Match Details concurrently
+    const detailPromises = leagueData.esMatches.map(async (match) => {
+      try {
+        const detailUrl = `https://www.brazilbet.rs/restapi/offer/sr/match/${match.id}?annex=51&mobileVersion=2.47.9.2&locale=sr`;
+        const detailRes = await fetch(detailUrl);
+        if (!detailRes.ok) return match;
+        return await detailRes.json();
+      } catch (err) {
+        return match;
+      }
+    });
 
-//     const tips = [];
+    const detailedMatches = await Promise.all(detailPromises);
 
-//     // 3. Process each detailed match
-//     for (const match of detailedMatches) {
-//       const playerName = match.home;
-//       const opponentName = match.away;
-//       const params = match.params || {};
-//       const odds = match.odds || {};
-//       const oddsArr = Object.values(odds); // Array of all odds values
+    // ==========================================
+    // OPTIMIZATION: BULK FETCH PLAYERS (1 Query)
+    // ==========================================
+    const allPlayersRes = await pool.query(
+      `SELECT player_id, player_name, position, team_id FROM players`,
+    );
+    const allPlayers = allPlayersRes.rows;
 
-//       // 4. Try to find this player in our DB (optional, won't break if not found)
-//       const playerRes = await pool.query(
-//         `SELECT player_id, player_name, position, team_id FROM players WHERE player_name ILIKE $1 LIMIT 1`,
-//         [`%${playerName}%`],
-//       );
+    // Helper to match "First Last" or "LAST FIRST" using JS instead of DB queries
+    const findPlayer = (name) => {
+      const parts = name
+        .toLowerCase()
+        .split(" ")
+        .filter((p) => p.length > 1);
+      return allPlayers.find((p) => {
+        const pLower = p.player_name.toLowerCase();
+        return parts.every((part) => pLower.includes(part));
+      });
+    };
 
-//       const dbPlayer = playerRes.rows[0] || {
-//         player_id: `NBA_${playerName.replace(/\s/g, "_")}`,
-//         player_name: playerName,
-//         position: "G",
-//         team_id: "NBA",
-//       };
+    // ==========================================
+    // OPTIMIZATION: PRE-MATCH PLAYERS & COLLECT IDS
+    // ==========================================
+    const matchedPlayersMap = {}; // match.id -> dbPlayer
+    const uniquePlayerIds = new Set();
 
-//       // 5. Find real opponent (if in DB)
-//       let realOpponentId = "TBD";
-//       let realOpponentName = opponentName;
-//       let realGameId = String(match.id);
+    for (const match of detailedMatches) {
+      const playerName = match.home;
+      const dbPlayer = findPlayer(playerName);
 
-//       if (playerRes.rows.length > 0) {
-//         const nextGameRes = await pool.query(
-//           `SELECT game_id, team_id_a, team_id_b, team_a, team_b FROM games WHERE (team_id_a = $1 OR team_id_b = $1) AND date >= CURRENT_DATE ORDER BY date ASC LIMIT 1`,
-//           [dbPlayer.team_id],
-//         );
-//         if (nextGameRes.rows.length > 0) {
-//           const ng = nextGameRes.rows[0];
-//           realGameId = ng.game_id;
-//           realOpponentId =
-//             ng.team_id_a === dbPlayer.team_id ? ng.team_id_b : ng.team_id_a;
-//           realOpponentName =
-//             ng.team_id_a === dbPlayer.team_id ? ng.team_b : ng.team_a;
-//         }
-//       }
+      if (dbPlayer) {
+        matchedPlayersMap[match.id] = dbPlayer;
+        uniquePlayerIds.add(dbPlayer.player_id);
+      } else {
+        matchedPlayersMap[match.id] = {
+          player_id: `BET_${playerName.replace(/\s/g, "_")}`,
+          player_name: playerName,
+          position: "G",
+          team_id: "TBD",
+        };
+      }
+    }
 
-//       // 6. Define ALL markets and how to extract their odds
-//       const marketConfigs = [
-//         // STANDARD MARKETS (First 6 odds)
-//         {
-//           param: "ouPlPoints",
-//           market: "points",
-//           overOddsIdx: 0,
-//           underOddsIdx: 1,
-//         },
-//         {
-//           param: "ouPlAssists",
-//           market: "assists",
-//           overOddsIdx: 2,
-//           underOddsIdx: 3,
-//         },
-//         {
-//           param: "ouPlRebounds",
-//           market: "rebounds",
-//           overOddsIdx: 4,
-//           underOddsIdx: 5,
-//         },
+    const playerIdsArr = Array.from(uniquePlayerIds);
 
-//         // EXPANDED MARKETS (Using your mapped IDs)
-//         {
-//           param: "ouPlTPRA",
-//           market: "pra",
-//           overOddsId: 55215,
-//           underOddsId: 55217,
-//         }, // PRA
-//         {
-//           param: "ouPlTPR",
-//           market: "pr",
-//           overOddsId: 55244,
-//           underOddsId: 55246,
-//         }, // PR
-//         {
-//           param: "ouPlTPA",
-//           market: "pa",
-//           overOddsId: 55247,
-//           underOddsId: 55249,
-//         }, // PA
-//         {
-//           param: "ouPlTRA",
-//           market: "ra",
-//           overOddsId: 55250,
-//           underOddsId: 55252,
-//         }, // RA
+    // Early exit if no players matched
+    if (playerIdsArr.length === 0) {
+      // ... build empty tips fallback if needed, or just return empty
+      return res.json([]);
+    }
 
-//         // PLAYER PROPS
-//         {
-//           param: "ouPlSt",
-//           market: "steals",
-//           overOddsId: 55672,
-//           underOddsId: 55674,
-//         },
-//         {
-//           param: "ouPlB",
-//           market: "blocks",
-//           overOddsId: 55681,
-//           underOddsId: 55683,
-//         },
+    // ==========================================
+    // OPTIMIZATION: BULK FETCH TEAMS, GAMES, STATS (3 Queries)
+    // ==========================================
 
-//         // ALTERNATE LINES
-//         {
-//           param: "ouPlP2",
-//           market: "points_alt",
-//           overOddsId: 55253,
-//           underOddsId: 55255,
-//         },
-//         {
-//           param: "ouPlP3",
-//           market: "points_alt2",
-//           overOddsId: 55256,
-//           underOddsId: 55258,
-//         },
-//         {
-//           param: "ouPlA3",
-//           market: "assists_alt",
-//           overOddsId: 55262,
-//           underOddsId: 55264,
-//         },
-//         {
-//           param: "ouPlR2",
-//           market: "rebounds_alt",
-//           overOddsId: 55265,
-//           underOddsId: 55267,
-//         },
-//         {
-//           param: "ouPlR3",
-//           market: "rebounds_alt2",
-//           overOddsId: 55268,
-//           underOddsId: 55270,
-//         },
-//       ];
+    // 1. Get current teams for all matched players
+    const teamsRes = await pool.query(
+      `
+      SELECT DISTINCT ON (player_id) player_id, team_id 
+      FROM player_season_stats 
+      WHERE player_id = ANY($1) AND season_code = 'E2025'
+    `,
+      [playerIdsArr],
+    );
+    const teamMap = {}; // player_id -> team_id
+    teamsRes.rows.forEach((r) => (teamMap[r.player_id] = r.team_id));
 
-//       // 7. Process each market configuration
-//       for (const config of marketConfigs) {
-//         const lineString = params[config.param];
-//         if (!lineString) continue; // Skip if this line isn't available
+    // 2. Get next games for all those teams
+    const teamIdsArr = Object.values(teamMap);
+    let gameMap = {}; // team_id -> next game
 
-//         const line = parseFloat(lineString);
+    if (teamIdsArr.length > 0) {
+      const gamesRes = await pool.query(
+        `
+        SELECT game_id, team_id_a, team_id_b, team_a, team_b 
+        FROM games 
+        WHERE (team_id_a = ANY($1) OR team_id_b = ANY($1)) 
+          AND date >= CURRENT_DATE 
+        ORDER BY date ASC
+      `,
+        [teamIdsArr],
+      );
 
-//         // Extract Over/Under odds
-//         let overOdds = 1.9;
-//         let underOdds = 1.9;
+      gamesRes.rows.forEach((g) => {
+        if (!gameMap[g.team_id_a]) gameMap[g.team_id_a] = g;
+        if (!gameMap[g.team_id_b]) gameMap[g.team_id_b] = g;
+      });
+    }
 
-//         if (config.overOddsIdx !== undefined) {
-//           // Standard markets (by index)
-//           overOdds = oddsArr[config.overOddsIdx] || 1.9;
-//           underOdds = oddsArr[config.underOddsIdx] || 1.9;
-//         } else {
-//           // Expanded markets (by specific ID)
-//           overOdds = odds[config.overOddsId] || 1.9;
-//           underOdds = odds[config.underOddsId] || 1.9;
-//         }
+    // 3. Get Stats for ALL matched players (Last 50 games per player)
+    const statsRes = await pool.query(
+      `
+      SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+             bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date
+      FROM box_scores bs
+      JOIN games g ON bs.game_id = g.game_id 
+      WHERE bs.player_id = ANY($1) 
+        AND g.date <= CURRENT_DATE 
+        AND bs.minutes IS NOT NULL 
+        AND bs.minutes != 'DNP' 
+      ORDER BY bs.player_id, g.date DESC
+    `,
+      [playerIdsArr],
+    );
 
-//         // 8. Calculate Hit Rates (Only if player is in our DB)
-//         let hitRates = {
-//           season: { hits: 0, attempts: 0, rate: 0 },
-//           last5: { hits: 0, attempts: 0, rate: 0 },
-//           last10: { hits: 0, attempts: 0, rate: 0 },
-//           last15: { hits: 0, attempts: 0, rate: 0 },
-//           vs_opp: { hits: 0, attempts: 0, rate: 0 },
-//         };
-//         let score = 50;
-//         let finalSelection = "over";
+    const statsMap = {}; // player_id -> array of games (max 50)
+    statsRes.rows.forEach((r) => {
+      if (!statsMap[r.player_id]) statsMap[r.player_id] = [];
+      if (statsMap[r.player_id].length < 50) {
+        statsMap[r.player_id].push(r);
+      }
+    });
 
-//         if (playerRes.rows.length > 0) {
-//           const dbKeyMap = {
-//             points: "points",
-//             assists: "assists",
-//             rebounds: "total_rebounds",
-//             steals: "steals",
-//             blocks: "blocks_favour",
-//             // Note: PRA, PR, PA, RA would need custom SQL math. Skipping for now.
-//           };
+    // ==========================================
+    // OPTIMIZATION: BULK FETCH H2H DATA
+    // ==========================================
+    const opponentMap = {}; // player_id -> opponent_team_id
+    for (const pid of playerIdsArr) {
+      const tid = teamMap[pid];
+      const nextGame = gameMap[tid];
+      if (nextGame) {
+        opponentMap[pid] =
+          nextGame.team_id_a === tid ? nextGame.team_id_b : nextGame.team_id_a;
+      }
+    }
 
-//           const dbKey = dbKeyMap[config.market];
+    const opponentIdsSet = new Set(Object.values(opponentMap));
+    const opponentIdsArr = Array.from(opponentIdsSet);
+    let h2hMap = {}; // player_id -> [games]
 
-//           if (dbKey) {
-//             const statsRes = await pool.query(
-//               `SELECT bs.${dbKey} FROM box_scores bs JOIN games g ON bs.game_id = g.game_id WHERE bs.player_id = $1 AND g.date <= CURRENT_DATE AND bs.minutes IS NOT NULL AND bs.minutes != 'DNP' ORDER BY g.date DESC LIMIT 50`,
-//               [dbPlayer.player_id],
-//             );
+    if (opponentIdsArr.length > 0) {
+      const h2hRes = await pool.query(
+        `
+        SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+               bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date,
+               g.team_id_a, g.team_id_b, bs.team_id as bs_team_id
+        FROM box_scores bs
+        JOIN games g ON bs.game_id = g.game_id 
+        WHERE bs.player_id = ANY($1) 
+          AND (g.team_id_a = ANY($2) OR g.team_id_b = ANY($2))
+          AND bs.minutes != 'DNP'
+        ORDER BY bs.player_id, g.date DESC
+      `,
+        [playerIdsArr, opponentIdsArr],
+      );
 
-//             const games = statsRes.rows;
-//             if (games.length > 0) {
-//               const analyze = (list) => {
-//                 let over = 0,
-//                   under = 0,
-//                   att = 0;
-//                 for (const g of list) {
-//                   const val = parseFloat(g[dbKey]) || 0;
-//                   att++;
-//                   if (val > line) over++;
-//                   else if (val < line) under++;
-//                 }
-//                 const oRate = att > 0 ? over / att : 0;
-//                 const uRate = att > 0 ? under / att : 0;
-//                 return oRate >= uRate
-//                   ? { sel: "over", rate: oRate, hits: over, att }
-//                   : { sel: "under", rate: uRate, hits: under, att };
-//               };
+      // Filter to ensure it's against the SPECIFIC opponent for that player
+      h2hRes.rows.forEach((r) => {
+        const oppId = opponentMap[r.player_id];
+        if (
+          oppId &&
+          (r.team_id_a === oppId || r.team_id_b === oppId) &&
+          r.bs_team_id !== oppId
+        ) {
+          if (!h2hMap[r.player_id]) h2hMap[r.player_id] = [];
+          h2hMap[r.player_id].push(r);
+        }
+      });
+    }
 
-//               const sA = analyze(games);
-//               const l5A = analyze(games.slice(0, 5));
-//               const l10A = analyze(games.slice(0, 10));
-//               const l15A = analyze(games.slice(0, 15));
+    // ==========================================
+    // BUILD TIPS (100% In-Memory, 0 DB Queries)
+    // ==========================================
+    const tips = [];
 
-//               finalSelection = l10A.sel;
-//               hitRates = {
-//                 season: sA,
-//                 last5: l5A,
-//                 last10: l10A,
-//                 last15: l15A,
-//                 vs_opp: { hits: 0, attempts: 0, rate: 0 },
-//               };
-//               score = Math.round(l5A.rate * 40 + l10A.rate * 30 + 30);
-//             }
-//           }
-//         }
+    for (const match of detailedMatches) {
+      const dbPlayer = matchedPlayersMap[match.id];
+      const opponentName = match.away;
+      const params = match.params || {};
+      const odds = match.odds || {};
+      const oddsArr = Object.values(odds);
 
-//         // 9. Push the tip
-//         tips.push({
-//           id: `${realGameId}_${dbPlayer.player_id}_${config.market}_${line}`,
-//           game_id: realGameId,
-//           start_time: new Date(match.kickOffTime).toISOString(),
-//           player_id: dbPlayer.player_id,
-//           player: dbPlayer.player_name || playerName,
-//           team_id: dbPlayer.team_id,
-//           team: dbPlayer.team_id,
-//           opponent_team_id: realOpponentId,
-//           opponent: realOpponentName,
-//           position: dbPlayer.position,
-//           market: config.market,
-//           selection: finalSelection,
-//           line: line,
-//           odds: finalSelection === "over" ? overOdds : underOdds,
-//           overOdds: overOdds, // Send both so frontend can display them
-//           underOdds: underOdds,
-//           hit_rates: hitRates,
-//           score: score,
-//         });
-//       }
-//     }
+      let realOpponentId = "TBD";
+      let realOpponentName = opponentName;
+      let realGameId = String(match.id);
+      let currentTeamId = dbPlayer.team_id;
+      let currentTeamName = dbPlayer.team_id;
 
-//     // Sort by score (best bets at the top)
-//     tips.sort((a, b) => b.score - a.score);
-//     res.json(tips);
-//   } catch (error) {
-//     console.error(error);
-//     res
-//       .status(500)
-//       .json({ error: "Failed to process odds", details: error.message });
-//   }
-// });
+      // Only process DB logic if we actually matched the player earlier
+      if (uniquePlayerIds.has(dbPlayer.player_id)) {
+        currentTeamId = teamMap[dbPlayer.player_id] || dbPlayer.team_id;
+
+        const nextGame = gameMap[currentTeamId];
+        if (nextGame) {
+          realGameId = nextGame.game_id;
+          if (nextGame.team_id_a === currentTeamId) {
+            realOpponentId = nextGame.team_id_b;
+            realOpponentName = nextGame.team_b;
+            currentTeamName = nextGame.team_a;
+          } else {
+            realOpponentId = nextGame.team_id_a;
+            realOpponentName = nextGame.team_a;
+            currentTeamName = nextGame.team_b;
+          }
+        }
+      }
+
+      const marketConfigs = [
+        {
+          param: "ouPlPoints",
+          market: "points",
+          overOddsIdx: 0,
+          underOddsIdx: 1,
+        },
+        {
+          param: "ouPlAssists",
+          market: "assists",
+          overOddsIdx: 2,
+          underOddsIdx: 3,
+        },
+        {
+          param: "ouPlRebounds",
+          market: "rebounds",
+          overOddsIdx: 4,
+          underOddsIdx: 5,
+        },
+        {
+          param: "ouPlTPRA",
+          market: "pra",
+          overOddsId: 55215,
+          underOddsId: 55217,
+        },
+        {
+          param: "ouPlTPR",
+          market: "pr",
+          overOddsId: 55244,
+          underOddsId: 55246,
+        },
+        {
+          param: "ouPlTPA",
+          market: "pa",
+          overOddsId: 55247,
+          underOddsId: 55249,
+        },
+        {
+          param: "ouPlTRA",
+          market: "ra",
+          overOddsId: 55250,
+          underOddsId: 55252,
+        },
+        {
+          param: "ouPlSt",
+          market: "steals",
+          overOddsId: 55672,
+          underOddsId: 55674,
+        },
+        {
+          param: "ouPlB",
+          market: "blocks",
+          overOddsId: 55681,
+          underOddsId: 55683,
+        },
+        {
+          param: "ouPlP2",
+          market: "points_alt",
+          overOddsId: 55253,
+          underOddsId: 55255,
+        },
+        {
+          param: "ouPlP3",
+          market: "points_alt2",
+          overOddsId: 55256,
+          underOddsId: 55258,
+        },
+        {
+          param: "ouPlA3",
+          market: "assists_alt",
+          overOddsId: 55262,
+          underOddsId: 55264,
+        },
+        {
+          param: "ouPlR2",
+          market: "rebounds_alt",
+          overOddsId: 55265,
+          underOddsId: 55267,
+        },
+        {
+          param: "ouPlR3",
+          market: "rebounds_alt2",
+          overOddsId: 55268,
+          underOddsId: 55270,
+        },
+      ];
+
+      for (const config of marketConfigs) {
+        const lineString = params[config.param];
+        if (!lineString) continue;
+
+        const line = parseFloat(lineString);
+        let overOdds = 1.9;
+        let underOdds = 1.9;
+
+        if (config.overOddsIdx !== undefined) {
+          overOdds = oddsArr[config.overOddsIdx] || 1.9;
+          underOdds = oddsArr[config.underOddsIdx] || 1.9;
+        } else {
+          overOdds = odds[config.overOddsId] || 1.9;
+          underOdds = odds[config.underOddsId] || 1.9;
+        }
+
+        let hitRates = {
+          season: { hits: 0, attempts: 0, rate: 0 },
+          last5: { hits: 0, attempts: 0, rate: 0 },
+          last10: { hits: 0, attempts: 0, rate: 0 },
+          last15: { hits: 0, attempts: 0, rate: 0 },
+          vs_opp: { hits: 0, attempts: 0, rate: 0 },
+        };
+        let score = 50;
+        let finalSelection = "over";
+
+        // Get pre-fetched stats for this player
+        const games = statsMap[dbPlayer.player_id] || [];
+
+        const dbKeyMap = {
+          points: "points",
+          assists: "assists",
+          rebounds: "total_rebounds",
+          steals: "steals",
+          blocks: "blocks_favour",
+        };
+        const dbKey = dbKeyMap[config.market];
+
+        if (dbKey && games.length > 0) {
+          const analyze = (list) => {
+            let over = 0,
+              under = 0,
+              attempts = 0;
+            for (const g of list) {
+              const val = parseFloat(g[dbKey]) || 0;
+              attempts++;
+              if (val > line) over++;
+              else if (val < line) under++;
+            }
+            const oRate = attempts > 0 ? over / attempts : 0;
+            const uRate = attempts > 0 ? under / attempts : 0;
+            return oRate >= uRate
+              ? { sel: "over", rate: oRate, hits: over, attempts }
+              : { sel: "under", rate: uRate, hits: under, attempts };
+          };
+
+          const sA = analyze(games);
+          const l5A = analyze(games.slice(0, 5));
+          const l10A = analyze(games.slice(0, 10));
+          const l15A = analyze(games.slice(0, 15));
+
+          // --- ADD H2H CALCULATION HERE ---
+          const h2hGames = h2hMap[dbPlayer.player_id] || [];
+          const vsOppA = analyze(h2hGames);
+
+          finalSelection = l10A.sel;
+          // --- UPDATE vs_opp WITH vsOppA ---
+          hitRates = {
+            season: sA,
+            last5: l5A,
+            last10: l10A,
+            last15: l15A,
+            vs_opp: vsOppA,
+          };
+          score = Math.round(l5A.rate * 40 + l10A.rate * 30 + 30);
+        }
+
+        tips.push({
+          id: `${realGameId}_${dbPlayer.player_id}_${config.market}_${line}`,
+          game_id: realGameId,
+          start_time: new Date(match.kickOffTime).toISOString(),
+          player_id: dbPlayer.player_id,
+          player: dbPlayer.player_name || match.home,
+          team_id: currentTeamId,
+          team: currentTeamName,
+          opponent_team_id: realOpponentId,
+          opponent: realOpponentName,
+          position: dbPlayer.position,
+          market: config.market,
+          selection: finalSelection,
+          line: line,
+          odds: finalSelection === "over" ? overOdds : underOdds,
+          overOdds: overOdds,
+          underOdds: underOdds,
+          hit_rates: hitRates,
+          score: score,
+        });
+      }
+    }
+
+    tips.sort((a, b) => b.score - a.score);
+    res.json(tips);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Failed to process odds", details: error.message });
+  }
+});
 // ==========================================
 // START THE SERVER
 // ==========================================
