@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   useLocation,
   useNavigate,
@@ -48,9 +48,15 @@ function calculateHitRate(
   if (values.length === 0) return { hits: 0, attempts: 0, rate: 0 };
 
   let hits = 0;
+  const numLine = Number(line);
+  const sel = selection === "under" ? "under" : "over"; // Force strict "over" or "under"
+
   for (const value of values) {
-    if (selection === "over" && value > line) hits++;
-    if (selection === "under" && value < line) hits++;
+    const numVal = Number(value);
+    if (isNaN(numVal)) continue; // Skip if data is missing
+
+    if (sel === "over" && numVal > numLine) hits++;
+    if (sel === "under" && numVal < numLine) hits++;
   }
 
   return { hits, attempts: values.length, rate: hits / values.length };
@@ -259,11 +265,17 @@ export default function PlayerStats() {
     return val && val !== "null" ? val : fallback;
   };
 
+  // 1. Get the raw market from the URL
+  const rawMarket =
+    searchParams.get("propType") || savedState?.market || "points";
+
+  // 2. Normalize it: "points_alt2" becomes "points", "rebounds_alt" becomes "rebounds"
+  const normalizedMarket = rawMarket.replace(/_alt\d*/g, "");
   // 2. Merge URL params with SAVED State (URL wins for prop/line/overUnder)
   const tip = {
     ...savedState,
     player_id: playerId || savedState?.player_id || "",
-    market: getParam("propType", savedState?.market || "points"),
+    market: normalizedMarket,
     line: parseFloat(
       getParam("propAmount", String(savedState?.line || "10.5")),
     ),
@@ -505,58 +517,6 @@ export default function PlayerStats() {
     loadSimilarPlayers();
   }, [tip.opponent_team_id, tip.position, tip.market, tip.line]);
 
-  if (!tip) {
-    return (
-      <div className={styles.noData}>
-        <p>No player data provided. Go back to the dashboard.</p>
-        <button onClick={() => navigate("/")}>Go Back</button>
-      </div>
-    );
-  }
-
-  const marketKey = () => {
-    switch (tip.market) {
-      case "points":
-        return "points";
-      case "assists":
-        return "assists";
-      case "rebounds":
-        return "total_rebounds";
-      case "threes_made":
-        return "three_points_made";
-      default:
-        return "points";
-    }
-  };
-
-  const marketLabel = () => {
-    switch (tip.market) {
-      case "points":
-        return "Points";
-      case "assists":
-        return "Assists";
-      case "rebounds":
-        return "Rebounds";
-      case "threes_made":
-        return "3PT Made";
-      default:
-        return "Points";
-    }
-  };
-
-  const showFga = tip.market === "points";
-  const show3pta = tip.market === "points" || tip.market === "threes_made";
-
-  const getBarColor = (value: number) => {
-    const sel = tip.selection || "over";
-    if (sel === "over") {
-      return value > tip.line ? "#4caf50" : "#e94560";
-    }
-    return value < tip.line ? "#4caf50" : "#e94560";
-  };
-
-  // 1. Filter by Venue (Home / Away / Both)
-
   const filterByVenue = (games: PlayerGameStat[]) => {
     if (venueFilter === "all") return games;
 
@@ -576,13 +536,139 @@ export default function PlayerStats() {
   const venueFilteredStats = filterByVenue(stats);
   const venueFilteredH2H = filterByVenue(h2hStats);
 
-  // 2. Apply L5/L10/L15/Season/H2H on top of the venue-filtered stats
+  // 1. Helper to map raw DB stats to combined stats
+  const mapToChartData = (stats: PlayerGameStat[]) =>
+    stats.map((game) => {
+      const pts = parseFloat(String(game.points)) || 0;
+      const reb = parseFloat(String(game.total_rebounds)) || 0;
+      const ast = parseFloat(String(game.assists)) || 0;
+      const stl = parseFloat(String(game.steals)) || 0;
+      const blk = parseFloat(String(game.blocks_favour ?? game.blocks)) || 0;
+      return {
+        ...game,
+        steals: stl,
+        blocks: blk,
+        pa: pts + ast,
+        pr: pts + reb,
+        ra: reb + ast,
+        pra: pts + reb + ast,
+      };
+    });
+
+  // 2. GRAPH DATA: Sliced based on the active filter (L5, L10, H2H, etc.)
   const displayedStats =
     activeFilter === "h2h"
       ? venueFilteredH2H
       : activeFilter === "season"
         ? venueFilteredStats
         : venueFilteredStats.slice(-parseInt(activeFilter));
+
+  const chartData = useMemo(
+    () => mapToChartData(displayedStats),
+    [displayedStats],
+  );
+
+  // 3. HIT RATE DATA: Always full arrays, never sliced by the graph filter!
+  const fullSeasonChartData = useMemo(
+    () => mapToChartData(venueFilteredStats),
+    [venueFilteredStats],
+  );
+  const fullH2HChartData = useMemo(
+    () => mapToChartData(venueFilteredH2H),
+    [venueFilteredH2H],
+  );
+  if (!tip) {
+    return (
+      <div className={styles.noData}>
+        <p>No player data provided. Go back to the dashboard.</p>
+        <button onClick={() => navigate("/")}>Go Back</button>
+      </div>
+    );
+  }
+
+  const marketKey = () => {
+    switch (tip.market) {
+      case "points":
+      case "points_alt":
+      case "points_alt2":
+        return "points";
+      case "assists":
+      case "assists_alt":
+        return "assists";
+      case "rebounds":
+      case "rebounds_alt":
+      case "rebounds_alt2":
+        return "total_rebounds";
+      case "threes_made":
+        return "three_points_made";
+      case "steals":
+        return "steals";
+      case "blocks":
+        return "blocks";
+      case "pa":
+        return "pa";
+      case "pr":
+        return "pr";
+      case "ra":
+        return "ra";
+      case "pra":
+        return "pra";
+      default:
+        return "points";
+    }
+  };
+
+  const marketLabel = () => {
+    switch (tip.market) {
+      case "points":
+        return "Points";
+      case "points_alt":
+        return "Points (Alt 1)";
+      case "points_alt2":
+        return "Points (Alt 2)";
+      case "assists":
+        return "Assists";
+      case "assists_alt":
+        return "Assists (Alt)";
+      case "rebounds":
+        return "Rebounds";
+      case "rebounds_alt":
+        return "Rebounds (Alt 1)";
+      case "rebounds_alt2":
+        return "Rebounds (Alt 2)";
+      case "threes_made":
+        return "3PT Made";
+      case "steals":
+        return "Steals";
+      case "blocks":
+        return "Blocks";
+      case "pa":
+        return "Points + Assists";
+      case "pr":
+        return "Points + Rebounds";
+      case "ra":
+        return "Rebounds + Assists";
+      case "pra":
+        return "Points + Rebounds + Assists";
+      default:
+        return "Points";
+    }
+  };
+
+  const showFga = tip.market === "points";
+  const show3pta = tip.market === "points" || tip.market === "threes_made";
+
+  const getBarColor = (value: number) => {
+    const sel = tip.selection || "over";
+    if (sel === "over") {
+      return value > tip.line ? "#4caf50" : "#e94560";
+    }
+    return value < tip.line ? "#4caf50" : "#e94560";
+  };
+
+  // 1. Filter by Venue (Home / Away / Both)
+
+  // 2. Apply L5/L10/L15/Season/H2H on top of the venue-filtered stats
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -615,6 +701,29 @@ export default function PlayerStats() {
     setInputLine(tipItem.line);
     setInputOverUnder(tipItem.selection || "over");
     setPendingTipData(tipItem);
+  };
+
+  // 2. Use the new type instead of 'any'
+  const getStatValue = (s: PlayerGameStat) => {
+    const key = marketKey();
+
+    // Safely extract base stats
+    const pts = Number(s.points) || 0;
+    const reb = Number(s.total_rebounds) || 0;
+    const ast = Number(s.assists) || 0;
+    const stl = Number(s.steals) || 0;
+    const blk = Number(s.blocks || s.blocks_favour) || 0;
+
+    // Calculate combinations on the fly
+    if (key === "pa") return pts + ast;
+    if (key === "pr") return pts + reb;
+    if (key === "ra") return reb + ast;
+    if (key === "pra") return pts + reb + ast;
+    if (key === "steals") return stl;
+    if (key === "blocks") return blk;
+
+    // Fallback for standard stats (points, rebounds, etc.)
+    return Number(s[key as keyof PlayerGameStat]) || 0;
   };
 
   return (
@@ -743,6 +852,17 @@ export default function PlayerStats() {
               <option value="rebounds">Rebounds</option>
               <option value="assists">Assists</option>
               <option value="threes_made">3PT Made</option>
+
+              <optgroup label="Combinations">
+                <option value="pra">P + R + A</option>
+                <option value="pa">P + A</option>
+                <option value="pr">P + R</option>
+                <option value="ra">R + A</option>
+              </optgroup>
+              <optgroup label="Defense">
+                <option value="steals">Steals</option>
+                <option value="blocks">Blocks</option>
+              </optgroup>
             </select>
 
             {/* SEARCH BUTTON */}
@@ -763,9 +883,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="L5"
               hr={calculateHitRate(
-                venueFilteredStats
-                  .slice(-5)
-                  .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
+                fullSeasonChartData.slice(-5).map(getStatValue),
                 tip.line,
                 tip.selection,
               )}
@@ -773,9 +891,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="L10"
               hr={calculateHitRate(
-                venueFilteredStats
-                  .slice(-10)
-                  .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
+                fullSeasonChartData.slice(-10).map(getStatValue),
                 tip.line,
                 tip.selection,
               )}
@@ -783,9 +899,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="L15"
               hr={calculateHitRate(
-                venueFilteredStats
-                  .slice(-15)
-                  .map((s) => s[marketKey() as keyof PlayerGameStat] as number),
+                fullSeasonChartData.slice(-15).map(getStatValue),
                 tip.line,
                 tip.selection,
               )}
@@ -793,9 +907,7 @@ export default function PlayerStats() {
             <HitRateBox
               label="Season"
               hr={calculateHitRate(
-                venueFilteredStats.map(
-                  (s) => s[marketKey() as keyof PlayerGameStat] as number,
-                ),
+                fullSeasonChartData.map(getStatValue),
                 tip.line,
                 tip.selection,
               )}
@@ -803,15 +915,12 @@ export default function PlayerStats() {
             <HitRateBox
               label={`VS ${tip.opponent_team_id}`}
               hr={calculateHitRate(
-                venueFilteredH2H.map(
-                  (s) => s[marketKey() as keyof PlayerGameStat] as number,
-                ),
+                fullH2HChartData.map(getStatValue),
                 tip.line,
                 tip.selection,
               )}
             />
           </div>
-
           {/* Game Filter Buttons */}
           <div className={styles.filterRow}>
             {/* LEFT SIDE: Graph Length Filters */}
@@ -837,7 +946,7 @@ export default function PlayerStats() {
           <div className={styles.chartContainer}>
             <h3 className={styles.chartTitle}>{marketLabel()} per Game</h3>
             <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={displayedStats}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis
                   dataKey="dateFormatted"
@@ -876,9 +985,10 @@ export default function PlayerStats() {
                     fontWeight: "bold",
                   }}
                 >
-                  {displayedStats.map((entry, index) => {
+                  {chartData.map((entry, index) => {
+                    // 👈 CHANGED TO chartData
                     const value = entry[
-                      marketKey() as keyof PlayerGameStat
+                      marketKey() as keyof typeof entry
                     ] as number;
                     return (
                       <Cell key={`cell-${index}`} fill={getBarColor(value)} />

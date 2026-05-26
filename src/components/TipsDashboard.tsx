@@ -144,13 +144,20 @@ export default function TipsDashboard() {
         {viewMode === "odds" ? (
           <div className={styles.sidebarSection}>
             <div>
-              <label className={styles.filterLabel}>League ID</label>
-              <input
-                type="text"
-                className={styles.filterInput}
+              <label className={styles.filterLabel}>Select League</label>
+              <select
+                className={styles.filterSelect}
                 value={oddsLeagueId}
                 onChange={(e) => setOddsLeagueId(e.target.value)}
-              />
+              >
+                <option value="631799">Euroleague</option>
+                <option value="eurocup" disabled>
+                  Eurocup (Coming Soon)
+                </option>
+                <option value="nba" disabled>
+                  NBA (Coming Soon)
+                </option>
+              </select>
             </div>
 
             {jsonGames.length > 0 && (

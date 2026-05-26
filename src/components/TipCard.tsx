@@ -24,7 +24,22 @@ type TipLike = {
 
   position?: string;
 
-  market: "points" | "assists" | "rebounds" | "threes_made";
+  market:
+    | "points"
+    | "assists"
+    | "rebounds"
+    | "threes_made"
+    | "pa"
+    | "pr"
+    | "ra"
+    | "pra"
+    | "steals"
+    | "blocks"
+    | "points_alt"
+    | "points_alt2"
+    | "assists_alt"
+    | "rebounds_alt"
+    | "rebounds_alt2";
   selection: "over" | "under";
   line: number;
 
@@ -70,13 +85,32 @@ function formatStartTime(isoString: string) {
 function marketLabel(market: TipLike["market"]) {
   switch (market) {
     case "points":
-      return "Points";
+    case "points_alt":
+    case "points_alt2":
+      return "Points"; // All of them just say "Points"
     case "assists":
+    case "assists_alt":
       return "Assists";
     case "rebounds":
+    case "rebounds_alt":
+    case "rebounds_alt2":
       return "Rebounds";
     case "threes_made":
       return "3PT Made";
+    case "steals":
+      return "Steals";
+    case "blocks":
+      return "Blocks";
+    case "pa":
+      return "P + A";
+    case "pr":
+      return "P + R";
+    case "ra":
+      return "R + A";
+    case "pra":
+      return "P + R + A";
+    default:
+      return "Points";
   }
 }
 

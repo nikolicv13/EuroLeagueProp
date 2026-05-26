@@ -15,6 +15,53 @@ app.use(cors());
 app.use(express.json());
 const USE_MOCK_ODDS = true;
 
+function getMarketValue(game, market) {
+  const pts = parseFloat(game.points) || 0;
+  const reb = parseFloat(game.total_rebounds) || 0;
+  const ast = parseFloat(game.assists) || 0;
+  const stl = parseFloat(game.steals) || 0;
+  const blk = parseFloat(game.blocks_favour) || 0;
+  const threes = parseFloat(game.three_points_made) || 0;
+
+  switch (market) {
+    // Points & Alts
+    case "points":
+    case "points_alt":
+    case "points_alt2":
+      return pts;
+
+    // Rebounds & Alts
+    case "rebounds":
+    case "rebounds_alt":
+    case "rebounds_alt2":
+      return reb;
+
+    // Assists & Alts
+    case "assists":
+    case "assists_alt":
+      return ast;
+
+    // Others
+    case "threes_made":
+      return threes;
+    case "steals":
+      return stl;
+    case "blocks":
+      return blk;
+    case "pa":
+      return pts + ast;
+    case "pr":
+      return pts + reb;
+    case "ra":
+      return reb + ast;
+    case "pra":
+      return pts + reb + ast;
+
+    default:
+      return 0;
+  }
+}
+
 // ==========================================
 // ROUTE 1: Test Route (keep this from before)
 // ==========================================
@@ -101,6 +148,8 @@ app.get("/api/players/:id/stats", async (req, res) => {
         bs.three_points_made,
         bs.three_points_attempted,
         bs.two_points_attempted,
+        bs.steals,
+        bs.blocks_favour as blocks,
         bs.minutes,
         g.date,
         g.team_id_a,
@@ -309,12 +358,12 @@ app.get("/api/tips/:gameId", async (req, res) => {
 
         const calcHitRate = (gameList) => {
           if (gameList.length === 0) return { hits: 0, attempts: 0, rate: 0 };
-          let hits = 0;
-          let attempts = 0;
+          let hits = 0,
+            attempts = 0;
           for (const g of gameList) {
             if (g.minutes === "DNP") continue;
             attempts++;
-            const value = parseFloat(g[m.key]) || 0;
+            const value = getMarketValue(g, m.market);
             if (value > line) hits++;
           }
           return { hits, attempts, rate: attempts > 0 ? hits / attempts : 0 };
@@ -670,14 +719,35 @@ app.get(
       };
       const positions = posMap[position] || [position];
 
-      // 2. Map frontend market names to DB columns
+      // 2. Map frontend market names to DB columns (WITH ALIASES INCLUDED)
       const statMap = {
-        points: { col: "points", avg: "points_per_game" },
-        rebounds: { col: "total_rebounds", avg: "total_rebounds_per_game" },
-        assists: { col: "assists", avg: "assists_per_game" },
+        points: { col: "bs.points", avg: "pss.points_per_game" },
+        rebounds: {
+          col: "bs.total_rebounds",
+          avg: "pss.total_rebounds_per_game",
+        },
+        assists: { col: "bs.assists", avg: "pss.assists_per_game" },
         threes_made: {
-          col: "three_points_made",
-          avg: "three_points_made_per_game",
+          col: "bs.three_points_made",
+          avg: "pss.three_points_made_per_game",
+        },
+        steals: { col: "bs.steals", avg: "pss.steals_per_game" },
+        blocks: { col: "bs.blocks_favour", avg: "pss.blocks_favour_per_game" },
+        pa: {
+          col: "(bs.points + bs.assists)",
+          avg: "(pss.points_per_game + pss.assists_per_game)",
+        },
+        pr: {
+          col: "(bs.points + bs.total_rebounds)",
+          avg: "(pss.points_per_game + pss.total_rebounds_per_game)",
+        },
+        ra: {
+          col: "(bs.total_rebounds + bs.assists)",
+          avg: "(pss.total_rebounds_per_game + pss.assists_per_game)",
+        },
+        pra: {
+          col: "(bs.points + bs.total_rebounds + bs.assists)",
+          avg: "(pss.points_per_game + pss.total_rebounds_per_game + pss.assists_per_game)",
         },
       };
 
@@ -685,50 +755,51 @@ app.get(
       if (!stat) return res.json([]);
 
       // 3. Fetch top players per game, filtered by similar average
+      // NOTE: We use ${stat.col} and ${stat.avg} DIRECTLY without adding 'bs.' or 'pss.' in the query string!
       const query = `
-      WITH matched_players AS (
-        SELECT player_id FROM players WHERE position = ANY($1::text[])
-      ),
-      parsed_stats AS (
+        WITH matched_players AS (
+          SELECT player_id FROM players WHERE position = ANY($1::text[])
+        ),
+        parsed_stats AS (
+          SELECT 
+            bs.player_id,
+            bs.player,
+            bs.team_id,
+            ${stat.col}::numeric as game_stat,
+            g.game_id,
+            g.date,
+            CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) as mins_played,
+            ROW_NUMBER() OVER(PARTITION BY g.game_id ORDER BY CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) DESC) as game_rn
+          FROM box_scores bs
+          JOIN games g ON bs.game_id = g.game_id
+          JOIN matched_players mp ON bs.player_id = mp.player_id
+          WHERE (g.team_id_a = $2 OR g.team_id_b = $2)
+            AND bs.team_id != $2
+            AND bs.minutes != 'DNP'
+        ),
+        filtered_stats AS (
+          SELECT 
+            ps.player_id,
+            ps.player,
+            ps.team_id,
+            ps.game_stat,
+            ps.date,
+            ${stat.avg}::numeric as avg_stat
+          FROM parsed_stats ps
+          JOIN player_season_stats pss 
+            ON ps.player_id = pss.player_id 
+            AND ps.team_id = pss.team_id 
+            AND pss.season_code = 'E2025'
+          WHERE ps.game_rn <= 2
+            AND ${stat.avg} >= $3 * 0.6
+            AND ${stat.avg} <= $3 * 1.4
+        )
         SELECT 
-          bs.player_id,
-          bs.player,
-          bs.team_id,
-          bs.${stat.col}::numeric as game_stat,
-          g.game_id,
-          g.date,
-          CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) as mins_played,
-          ROW_NUMBER() OVER(PARTITION BY g.game_id ORDER BY CAST(SPLIT_PART(bs.minutes, ':', 1) AS numeric) DESC) as game_rn
-        FROM box_scores bs
-        JOIN games g ON bs.game_id = g.game_id
-        JOIN matched_players mp ON bs.player_id = mp.player_id
-        WHERE (g.team_id_a = $2 OR g.team_id_b = $2)
-          AND bs.team_id != $2
-          AND bs.minutes != 'DNP'
-      ),
-      filtered_stats AS (
-        SELECT 
-          ps.player_id,
-          ps.player,
-          ps.team_id,
-          ps.game_stat,
-          ps.date,
-          pss.${stat.avg}::numeric as avg_stat
-        FROM parsed_stats ps
-        JOIN player_season_stats pss 
-          ON ps.player_id = pss.player_id 
-          AND ps.team_id = pss.team_id 
-          AND pss.season_code = 'E2025'
-        WHERE ps.game_rn <= 2
-          AND pss.${stat.avg} >= $3 * 0.6
-          AND pss.${stat.avg} <= $3 * 1.4
-      )
-      SELECT 
-        player_id, player, team_id, game_stat, date, avg_stat
-      FROM filtered_stats
-      ORDER BY date DESC
-      LIMIT 10;
-    `;
+          player_id, player, team_id, game_stat, date, avg_stat
+        FROM filtered_stats
+        ORDER BY date DESC
+        LIMIT 10;
+      `;
 
       const result = await pool.query(query, [
         positions,
@@ -984,7 +1055,7 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
       const oddsArr = Object.values(odds);
 
       let realOpponentId = "TBD";
-      let realOpponentName = opponentName;
+      let realOpponentName = opponentName || match.away || "Unknown"; // Fallback
       let realGameId = String(match.id);
       let currentTeamId = dbPlayer.team_id;
       let currentTeamName = dbPlayer.team_id;
@@ -998,12 +1069,12 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
           realGameId = nextGame.game_id;
           if (nextGame.team_id_a === currentTeamId) {
             realOpponentId = nextGame.team_id_b;
-            realOpponentName = nextGame.team_b;
-            currentTeamName = nextGame.team_a;
+            realOpponentName = nextGame.team_b || nextGame.team_id_b; // Fallback to ID
+            currentTeamName = nextGame.team_a || nextGame.team_id_a; // Fallback to ID
           } else {
             realOpponentId = nextGame.team_id_a;
-            realOpponentName = nextGame.team_a;
-            currentTeamName = nextGame.team_b;
+            realOpponentName = nextGame.team_a || nextGame.team_id_a; // Fallback to ID
+            currentTeamName = nextGame.team_b || nextGame.team_id_b; // Fallback to ID
           }
         }
       }
@@ -1124,43 +1195,49 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
         // Get pre-fetched stats for this player
         const games = statsMap[dbPlayer.player_id] || [];
 
-        const dbKeyMap = {
-          points: "points",
-          assists: "assists",
-          rebounds: "total_rebounds",
-          steals: "steals",
-          blocks: "blocks_favour",
-        };
-        const dbKey = dbKeyMap[config.market];
+        if (games.length > 0) {
+          // Determine master selection based on L10
+          let l10Over = 0,
+            l10Under = 0,
+            l10Attempts = 0;
+          const last10 = games.slice(0, 10);
+          for (const g of last10) {
+            const val = getMarketValue(g, config.market); // USE HELPER HERE
+            l10Attempts++;
+            if (val > line) l10Over++;
+            else if (val < line) l10Under++;
+          }
 
-        if (dbKey && games.length > 0) {
-          const analyze = (list) => {
-            let over = 0,
-              under = 0,
+          finalSelection =
+            l10Attempts > 0 ? (l10Over >= l10Under ? "over" : "under") : "over";
+
+          // Calculate hit rates STRICTLY for the locked-in finalSelection
+          const calcRate = (list) => {
+            let hits = 0,
               attempts = 0;
             for (const g of list) {
-              const val = parseFloat(g[dbKey]) || 0;
+              const val = getMarketValue(g, config.market); // USE HELPER HERE
               attempts++;
-              if (val > line) over++;
-              else if (val < line) under++;
+              if (finalSelection === "over" && val > line) hits++;
+              if (finalSelection === "under" && val < line) hits++;
             }
-            const oRate = attempts > 0 ? over / attempts : 0;
-            const uRate = attempts > 0 ? under / attempts : 0;
-            return oRate >= uRate
-              ? { sel: "over", rate: oRate, hits: over, attempts }
-              : { sel: "under", rate: uRate, hits: under, attempts };
+            return {
+              sel: finalSelection,
+              rate: attempts > 0 ? hits / attempts : 0,
+              hits,
+              attempts,
+            };
           };
 
-          const sA = analyze(games);
-          const l5A = analyze(games.slice(0, 5));
-          const l10A = analyze(games.slice(0, 10));
-          const l15A = analyze(games.slice(0, 15));
+          const sA = calcRate(games);
+          const l5A = calcRate(games.slice(0, 5));
+          const l10A = calcRate(games.slice(0, 10));
+          const l15A = calcRate(games.slice(0, 15));
 
           // --- ADD H2H CALCULATION HERE ---
           const h2hGames = h2hMap[dbPlayer.player_id] || [];
-          const vsOppA = analyze(h2hGames);
+          const vsOppA = calcRate(h2hGames);
 
-          finalSelection = l10A.sel;
           // --- UPDATE vs_opp WITH vsOppA ---
           hitRates = {
             season: sA,

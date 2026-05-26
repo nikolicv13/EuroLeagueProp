@@ -73,7 +73,6 @@ export interface SimilarPlayer {
   date: string;
 }
 
-
 export interface Tip {
   id: string;
   game_id: string;
@@ -87,7 +86,17 @@ export interface Tip {
   team_abbr?: string;
   opponent_abbr?: string;
   position?: string;
-  market: "points" | "assists" | "rebounds" | "threes_made";
+  market:
+    | "points"
+    | "assists"
+    | "rebounds"
+    | "threes_made"
+    | "pa"
+    | "pr"
+    | "ra"
+    | "pra"
+    | "steals"
+    | "blocks";
   selection: "over" | "under";
   line: number;
   odds: number;
@@ -110,6 +119,9 @@ export interface PlayerGameStat {
   three_points_made: number;
   three_points_attempted: number;
   two_points_attempted: number;
+  steals: number;
+  blocks: number;
+  blocks_favour: number;
   minutes: string;
   date: string;
   team_id_a: string;
@@ -201,14 +213,14 @@ export async function fetchPlayerSearch(
 }
 
 export async function fetchSimilarPlayers(
-  opponentId: string, 
-  position: string, 
+  opponentId: string,
+  position: string,
   market: string,
-  targetAvg?: number
+  targetAvg?: number,
 ): Promise<SimilarPlayer[]> {
   let url = `${API_URL}/similar-players/${opponentId}/${position}/${market}`;
   if (targetAvg) url += `?targetAvg=${targetAvg}`;
-  
+
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch similar players");
   return res.json();

@@ -72,6 +72,11 @@
   color: #333;
 }
 
+.filterSelect option:disabled {
+  color: #999;
+  background-color: #f9f9f9;
+  font-style: italic;
+}
 .modeButtonActiveOdds {
   background: #4caf50;
   color: white;
