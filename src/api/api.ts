@@ -113,16 +113,8 @@ export interface Tip {
 export interface PlayerGameStat {
   game_id: string;
   team_id?: string;
-  points: number;
-  total_rebounds: number;
-  assists: number;
-  three_points_made: number;
-  three_points_attempted: number;
-  two_points_attempted: number;
-  steals: number;
-  blocks: number;
-  blocks_favour: number;
-  minutes: string;
+  round?: string;
+  phase?: string;
   date: string;
   team_id_a: string;
   team_id_b: string;
@@ -130,6 +122,26 @@ export interface PlayerGameStat {
   team_b: string;
   score_a: number | null;
   score_b: number | null;
+  minutes: string;
+  points: number;
+  free_throws_made: number;
+  free_throws_attempted: number;
+  two_points_made: number;
+  two_points_attempted: number;
+  three_points_made: number;
+  three_points_attempted: number;
+  offensive_rebounds: number;
+  defensive_rebounds: number;
+  total_rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  blocks_favour: number;
+  turnovers: number;
+  fouls_committed: number;
+  fouls_received: number;
+  plus_minus: number;
+  pir: number;
 }
 export interface DefenseStatRank {
   avg: number;

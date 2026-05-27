@@ -34,6 +34,8 @@ import {
 } from "recharts";
 import styles from "./PlayerPage.module.css";
 
+const LOG_PER_PAGE = 15;
+
 function parseMinutes(minStr: string): number {
   if (!minStr || minStr === "DNP") return 0;
   return parseFloat(minStr.replace(":", "."));
@@ -301,6 +303,10 @@ export default function PlayerStats() {
   const [venueFilter, setVenueFilter] = useState<"all" | "home" | "away">(
     "all",
   );
+  const [phaseFilter, setPhaseFilter] = useState<
+    "all" | "regular" | "playoffs"
+  >("all");
+  const [logPage, setLogPage] = useState(1);
   const [selectedSeason, setSelectedSeason] = useState<string>("E2025");
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([
     "euroleague",
@@ -517,24 +523,44 @@ export default function PlayerStats() {
     loadSimilarPlayers();
   }, [tip.opponent_team_id, tip.position, tip.market, tip.line]);
 
-  const filterByVenue = (games: PlayerGameStat[]) => {
-    if (venueFilter === "all") return games;
+  const venueFilteredStats = useMemo(() => {
+    if (venueFilter === "all") return stats;
+    return stats.filter((game) => {
+      const isHome = game.team_id === game.team_id_a;
+      return venueFilter === "home" ? isHome : !isHome;
+    });
+  }, [stats, venueFilter]);
 
-    return games.filter((game) => {
-      // Use the player's team FOR THAT SPECIFIC GAME (handles team changes!)
-      const playersTeamInThisGame = game.team_id;
+  const venueFilteredH2H = useMemo(() => {
+    if (venueFilter === "all") return h2hStats;
+    return h2hStats.filter((game) => {
+      const isHome = game.team_id === game.team_id_a;
+      return venueFilter === "home" ? isHome : !isHome;
+    });
+  }, [h2hStats, venueFilter]);
 
-      // team_id_a is usually the Home team
-      const isHome = playersTeamInThisGame === game.team_id_a;
-
-      if (venueFilter === "home") return isHome;
-      if (venueFilter === "away") return !isHome;
+  // 2. Filter by Phase (Chained after Venue)
+  const phaseAndVenueFilteredStats = useMemo(() => {
+    if (phaseFilter === "all") return venueFilteredStats;
+    return venueFilteredStats.filter((game) => {
+      const p = game.phase?.toUpperCase() || "";
+      if (phaseFilter === "regular") return p.includes("REGULAR");
+      if (phaseFilter === "playoffs")
+        return !p.includes("REGULAR") && p.length > 0;
       return true;
     });
-  };
+  }, [venueFilteredStats, phaseFilter]);
 
-  const venueFilteredStats = filterByVenue(stats);
-  const venueFilteredH2H = filterByVenue(h2hStats);
+  const phaseAndVenueFilteredH2H = useMemo(() => {
+    if (phaseFilter === "all") return venueFilteredH2H;
+    return venueFilteredH2H.filter((game) => {
+      const p = game.phase?.toUpperCase() || "";
+      if (phaseFilter === "regular") return p.includes("REGULAR");
+      if (phaseFilter === "playoffs")
+        return !p.includes("REGULAR") && p.length > 0;
+      return true;
+    });
+  }, [venueFilteredH2H, phaseFilter]);
 
   // 1. Helper to map raw DB stats to combined stats
   const mapToChartData = (stats: PlayerGameStat[]) =>
@@ -555,28 +581,27 @@ export default function PlayerStats() {
       };
     });
 
-  // 2. GRAPH DATA: Sliced based on the active filter (L5, L10, H2H, etc.)
-  const displayedStats =
-    activeFilter === "h2h"
-      ? venueFilteredH2H
-      : activeFilter === "season"
-        ? venueFilteredStats
-        : venueFilteredStats.slice(-parseInt(activeFilter));
-
-  const chartData = useMemo(
-    () => mapToChartData(displayedStats),
-    [displayedStats],
-  );
-
-  // 3. HIT RATE DATA: Always full arrays, never sliced by the graph filter!
+  // 3. Map to Chart Data (Chained after Phase)
   const fullSeasonChartData = useMemo(
-    () => mapToChartData(venueFilteredStats),
-    [venueFilteredStats],
+    () => mapToChartData(phaseAndVenueFilteredStats),
+    [phaseAndVenueFilteredStats],
   );
+
   const fullH2HChartData = useMemo(
-    () => mapToChartData(venueFilteredH2H),
-    [venueFilteredH2H],
+    () => mapToChartData(phaseAndVenueFilteredH2H),
+    [phaseAndVenueFilteredH2H],
   );
+
+  // 2. GRAPH DATA: Sliced based on the active filter (L5, L10, H2H, etc.)
+  const displayedStats = useMemo(() => {
+    const baseData =
+      activeFilter === "h2h" ? fullH2HChartData : fullSeasonChartData;
+    if (activeFilter === "h2h" || activeFilter === "season") return baseData;
+    return baseData.slice(-parseInt(activeFilter));
+  }, [activeFilter, fullSeasonChartData, fullH2HChartData]);
+
+  const chartData = useMemo(() => displayedStats, [displayedStats]);
+
   if (!tip) {
     return (
       <div className={styles.noData}>
@@ -724,6 +749,34 @@ export default function PlayerStats() {
 
     // Fallback for standard stats (points, rebounds, etc.)
     return Number(s[key as keyof PlayerGameStat]) || 0;
+  };
+
+  // Calculate Field Goal Percentage
+  const getFG = (game: PlayerGameStat) => {
+    const made = (game.two_points_made || 0) + (game.three_points_made || 0);
+    const att =
+      (game.two_points_attempted || 0) + (game.three_points_attempted || 0);
+    if (att === 0) return "0.0";
+    return ((made / att) * 100).toFixed(1);
+  };
+
+  // Calculate Win/Loss
+  const getWL = (game: PlayerGameStat) => {
+    if (game.score_a === null || game.score_b === null) return "-";
+    const isHome = game.team_id === game.team_id_a;
+    const teamScore = isHome ? game.score_a : game.score_b;
+    const oppScore = isHome ? game.score_b : game.score_a;
+    return teamScore > oppScore ? "W" : "L";
+  };
+
+  const handleVenueChange = (val: "all" | "home" | "away") => {
+    setVenueFilter(val);
+    setLogPage(1);
+  };
+
+  const handlePhaseChange = (val: "all" | "regular" | "playoffs") => {
+    setPhaseFilter(val);
+    setLogPage(1);
   };
 
   return (
@@ -1231,6 +1284,149 @@ export default function PlayerStats() {
                 })}
               </div>
             )}
+          {/* ==========================================
+              GAME LOG TABLE
+              ========================================== */}
+          <div className={styles.gameLogContainer}>
+            <h3 className={styles.gameLogTitle}>
+              Game Log ({selectedSeason})
+              {phaseFilter !== "all" &&
+                ` - ${phaseFilter === "regular" ? "Regular Season" : "Playoffs"}`}
+              {venueFilter !== "all" &&
+                ` (${venueFilter === "home" ? "Home" : "Away"})`}
+            </h3>
+
+            <div className={styles.tableWrapper}>
+              <table className={styles.gameLogTable}>
+                <thead>
+                  <tr>
+                    <th>R</th>
+                    <th>DATE</th>
+                    <th>OPP</th>
+                    <th>H/A</th>
+                    <th>W/L</th>
+                    <th>MIN</th>
+                    <th>PTS</th>
+                    <th>FT</th>
+                    <th>2PT</th>
+                    <th>3PT</th>
+                    <th>FG%</th>
+                    <th>REB</th>
+                    <th>OR</th>
+                    <th>DR</th>
+                    <th>AST</th>
+                    <th>STL</th>
+                    <th>BLK</th>
+                    <th>TO</th>
+                    <th>FC</th>
+                    <th>FD</th>
+                    <th>+/-</th>
+                    <th>PIR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Create a reversed copy just for the table so newest is at the top */}
+                  {[...fullSeasonChartData]
+                    .reverse()
+                    .slice((logPage - 1) * LOG_PER_PAGE, logPage * LOG_PER_PAGE)
+                    .map((game) => {
+                      const isHome = game.team_id === game.team_id_a;
+                      const oppAbbr = isHome ? game.team_id_b : game.team_id_a;
+                      const wl = getWL(game);
+
+                      return (
+                        <tr
+                          key={game.game_id}
+                          className={wl === "L" ? styles.lossRow : ""}
+                        >
+                          <td>{game.round || "-"}</td>
+                          <td>{formatDate(game.date)}</td>
+                          <td className={styles.oppCell}>
+                            <img
+                              src={`/logos/${oppAbbr}.png`}
+                              alt={oppAbbr}
+                              className={styles.logLogo}
+                            />
+                            {oppAbbr}
+                          </td>
+                          <td>{isHome ? "H" : "A"}</td>
+                          <td
+                            className={
+                              wl === "W"
+                                ? styles.winText
+                                : wl === "L"
+                                  ? styles.lossText
+                                  : ""
+                            }
+                          >
+                            {wl}
+                          </td>
+                          <td>{game.minutes}</td>
+                          <td className={styles.statCell}>{game.points}</td>
+                          <td>
+                            {game.free_throws_made}/{game.free_throws_attempted}
+                          </td>
+                          <td>
+                            {game.two_points_made}/{game.two_points_attempted}
+                          </td>
+                          <td>
+                            {game.three_points_made}/
+                            {game.three_points_attempted}
+                          </td>
+                          <td>{getFG(game)}%</td>
+                          <td className={styles.statCell}>
+                            {game.total_rebounds}
+                          </td>
+                          <td>{game.offensive_rebounds}</td>
+                          <td>{game.defensive_rebounds}</td>
+                          <td className={styles.statCell}>{game.assists}</td>
+                          <td>{game.steals}</td>
+                          <td>{game.blocks || game.blocks_favour}</td>
+                          <td>{game.turnovers}</td>
+                          <td>{game.fouls_committed}</td>
+                          <td>{game.fouls_received}</td>
+                          <td
+                            className={
+                              game.plus_minus > 0
+                                ? styles.winText
+                                : game.plus_minus < 0
+                                  ? styles.lossText
+                                  : ""
+                            }
+                          >
+                            {game.plus_minus > 0 ? "+" : ""}
+                            {game.plus_minus}
+                          </td>
+                          <td className={styles.pirCell}>{game.pir}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Game Log Pagination */}
+            <div className={styles.logPagination}>
+              <button
+                onClick={() => setLogPage((p) => Math.max(1, p - 1))}
+                disabled={logPage === 1}
+                className={styles.logPageBtn}
+              >
+                ← Prev 15
+              </button>
+              <span className={styles.logPageInfo}>
+                Page {logPage} of{" "}
+                {Math.ceil(fullSeasonChartData.length / LOG_PER_PAGE)}
+              </span>
+              <button
+                onClick={() => setLogPage((p) => p + 1)}
+                disabled={logPage * LOG_PER_PAGE >= fullSeasonChartData.length}
+                className={styles.logPageBtn}
+              >
+                Next 15 →
+              </button>
+            </div>
+          </div>
         </div>
         <div className={styles.filtersColumn}>
           {/* Venue Toggle (Home / Away / Both) */}
@@ -1238,7 +1434,7 @@ export default function PlayerStats() {
           <p className={styles.filterParagraph}>Filter stats by home or away</p>
           <div className={styles.venueToggleGroup}>
             <button
-              onClick={() => setVenueFilter("all")}
+              onClick={() => handleVenueChange("all")}
               className={
                 venueFilter === "all"
                   ? styles.venueToggleButtonActive
@@ -1248,7 +1444,7 @@ export default function PlayerStats() {
               Both
             </button>
             <button
-              onClick={() => setVenueFilter("home")}
+              onClick={() => handleVenueChange("home")}
               className={
                 venueFilter === "home"
                   ? styles.venueToggleButtonActive
@@ -1258,7 +1454,7 @@ export default function PlayerStats() {
               Home
             </button>
             <button
-              onClick={() => setVenueFilter("away")}
+              onClick={() => handleVenueChange("away")}
               className={
                 venueFilter === "away"
                   ? styles.venueToggleButtonActive
@@ -1266,6 +1462,45 @@ export default function PlayerStats() {
               }
             >
               Away
+            </button>
+          </div>
+          {/* 👇 NEW: PHASE TOGGLE (Regular / Playoffs) 👇 */}
+          <h3 className={styles.filterTitle} style={{ marginTop: "24px" }}>
+            Phase
+          </h3>
+          <p className={styles.filterParagraph}>
+            Filter by Regular Season or Playoffs
+          </p>
+          <div className={styles.venueToggleGroup}>
+            <button
+              onClick={() => handlePhaseChange("all")}
+              className={
+                phaseFilter === "all"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              All
+            </button>
+            <button
+              onClick={() => handlePhaseChange("regular")}
+              className={
+                phaseFilter === "regular"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              Regular
+            </button>
+            <button
+              onClick={() => handlePhaseChange("playoffs")}
+              className={
+                phaseFilter === "playoffs"
+                  ? styles.venueToggleButtonActive
+                  : styles.venueToggleButton
+              }
+            >
+              Playoffs
             </button>
           </div>
 
@@ -1277,9 +1512,9 @@ export default function PlayerStats() {
               value={selectedSeason}
               onChange={(e) => setSelectedSeason(e.target.value)}
             >
-              <option value="E2025">2024/25</option>
-              <option value="E2024">2023/24</option>
-              <option value="E2023">2022/23</option>
+              <option value="E2025">2025/26</option>
+              <option value="E2024">2024/25</option>
+              <option value="E2023">2023/24</option>
             </select>
           </div>
           {/* LEAGUE FILTER */}

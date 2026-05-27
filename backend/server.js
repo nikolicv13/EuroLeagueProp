@@ -139,25 +139,37 @@ app.get("/api/players/:id/stats", async (req, res) => {
     const currentDate = gameDate || new Date().toISOString().split("T")[0];
 
     let query = `
-      SELECT 
+       SELECT 
         bs.game_id,
         bs.team_id, 
-        bs.points,
-        bs.total_rebounds,
-        bs.assists,
-        bs.three_points_made,
-        bs.three_points_attempted,
-        bs.two_points_attempted,
-        bs.steals,
-        bs.blocks_favour as blocks,
-        bs.minutes,
+        g.round,
+        g.phase,
         g.date,
         g.team_id_a,
         g.team_id_b,
         g.team_a,
         g.team_b,
         g.score_a,
-        g.score_b
+        g.score_b,
+        bs.minutes,
+        bs.points,
+        bs.free_throws_made,
+        bs.free_throws_attempted,
+        bs.two_points_made,
+        bs.two_points_attempted,
+        bs.three_points_made,
+        bs.three_points_attempted,
+        bs.offensive_rebounds,
+        bs.defensive_rebounds,
+        bs.total_rebounds,
+        bs.assists,
+        bs.steals,
+        bs.blocks_favour as blocks,
+        bs.turnovers,
+        bs.fouls_committed,
+        bs.fouls_received,
+        bs.plus_minus,
+        bs.valuation as pir
       FROM box_scores bs
       JOIN games g ON bs.game_id = g.game_id
       WHERE bs.player_id = $1 
