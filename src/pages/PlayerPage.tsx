@@ -344,6 +344,114 @@ export default function PlayerStats() {
       : null,
   );
 
+  // WITH Teammate States
+  const [withQuery, setWithQuery] = useState(
+    searchParams.get("withName") || "",
+  );
+  const [withResults, setWithResults] = useState<PlayerSearchResult[]>([]);
+  const [showWithDropdown, setShowWithDropdown] = useState(false);
+  const [selectedWith, setSelectedWith] = useState<{
+    id: string;
+    name: string;
+  } | null>(
+    searchParams.get("withId")
+      ? {
+          id: searchParams.get("withId")!,
+          name: decodeURIComponent(searchParams.get("withName") || ""),
+        }
+      : null,
+  );
+
+  // WITHOUT Teammate States
+  const [withoutQuery, setWithoutQuery] = useState(
+    searchParams.get("withoutName") || "",
+  );
+  const [withoutResults, setWithoutResults] = useState<PlayerSearchResult[]>(
+    [],
+  );
+  const [showWithoutDropdown, setShowWithoutDropdown] = useState(false);
+  const [selectedWithout, setSelectedWithout] = useState<{
+    id: string;
+    name: string;
+  } | null>(
+    searchParams.get("withoutId")
+      ? {
+          id: searchParams.get("withoutId")!,
+          name: decodeURIComponent(searchParams.get("withoutName") || ""),
+        }
+      : null,
+  );
+
+  // Generic Search Handler
+  const handleTeammateSearch = async (
+    type: "with" | "without",
+    value: string,
+  ) => {
+    if (type === "with") setWithQuery(value);
+    else setWithoutQuery(value);
+
+    if (value.length >= 2) {
+      try {
+        const results = await fetchPlayerSearch(value);
+        if (type === "with") {
+          setWithResults(results);
+          setShowWithDropdown(true);
+        } else {
+          setWithoutResults(results);
+          setShowWithoutDropdown(true);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      if (type === "with") {
+        setWithResults([]);
+        setShowWithDropdown(false);
+      } else {
+        setWithoutResults([]);
+        setShowWithoutDropdown(false);
+      }
+    }
+  };
+
+  // Generic Select Handler
+  const handleSelectTeammate = (
+    type: "with" | "without",
+    player: PlayerSearchResult,
+  ) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (type === "with") {
+      setSelectedWith({ id: player.player_id, name: player.player_name });
+      setWithQuery(player.player_name);
+      setShowWithDropdown(false);
+      newParams.set("withId", player.player_id);
+      newParams.set("withName", encodeURIComponent(player.player_name));
+    } else {
+      setSelectedWithout({ id: player.player_id, name: player.player_name });
+      setWithoutQuery(player.player_name);
+      setShowWithoutDropdown(false);
+      newParams.set("withoutId", player.player_id);
+      newParams.set("withoutName", encodeURIComponent(player.player_name));
+    }
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
+
+  // Generic Clear Handler
+  const clearTeammate = (type: "with" | "without") => {
+    const newParams = new URLSearchParams(searchParams);
+    if (type === "with") {
+      setSelectedWith(null);
+      setWithQuery("");
+      newParams.delete("withId");
+      newParams.delete("withName");
+    } else {
+      setSelectedWithout(null);
+      setWithoutQuery("");
+      newParams.delete("withoutId");
+      newParams.delete("withoutName");
+    }
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
   const handleLeagueToggle = (league: string) => {
     setSelectedLeagues((prev) => {
       if (prev.includes(league)) {
@@ -441,6 +549,8 @@ export default function PlayerStats() {
         selectedSeason, // <-- Only fetch the selected season
         undefined,
         selectedOppPlayer?.id,
+        selectedWith?.id,
+        selectedWithout?.id,
       );
       const reversed = data.reverse();
 
@@ -466,7 +576,14 @@ export default function PlayerStats() {
     }
 
     loadSeasonStats();
-  }, [tip.player_id, tip.team_id, selectedSeason, selectedOppPlayer?.id]);
+  }, [
+    tip.player_id,
+    tip.team_id,
+    selectedSeason,
+    selectedOppPlayer?.id,
+    selectedWith?.id,
+    selectedWithout?.id,
+  ]);
 
   // 5B. Fetch H2H Stats (runs when opponent is available)
   useEffect(() => {
@@ -1638,6 +1755,157 @@ export default function PlayerStats() {
                 ⚔️ Showing games vs {selectedOppPlayer.name}
               </p>
             )}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              marginTop: "10px",
+            }}
+          >
+            {/* 1. WITH TEAMMATE (Green) */}
+            <div className={styles.searchBarWrapper}>
+              <label
+                className={styles.filterLabel}
+                style={{
+                  color: "#4caf50",
+                  marginBottom: "5px",
+                  display: "block",
+                }}
+              >
+                🤝 With Teammate
+              </label>
+              <div
+                style={{ position: "relative", display: "flex", gap: "8px" }}
+              >
+                <input
+                  type="text"
+                  value={withQuery}
+                  onChange={(e) => handleTeammateSearch("with", e.target.value)}
+                  onBlur={() =>
+                    setTimeout(() => setShowWithDropdown(false), 200)
+                  }
+                  onFocus={() =>
+                    withResults.length > 0 && setShowWithDropdown(true)
+                  }
+                  placeholder="Search teammate..."
+                  className={`${styles.searchInput} ${selectedWith ? styles.searchInputActiveWith : ""}`}
+                  style={{ flex: 1 }}
+                />
+                {selectedWith && (
+                  <button
+                    onClick={() => clearTeammate("with")}
+                    className={styles.clearWithBtn}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {showWithDropdown && withResults.length > 0 && (
+                <ul className={styles.searchDropdown}>
+                  {withResults.map((p, i) => (
+                    <li
+                      key={`${p.player_id}-${i}`}
+                      onMouseDown={() => handleSelectTeammate("with", p)}
+                      className={styles.searchDropdownItem}
+                    >
+                      <span className={styles.searchDropdownName}>
+                        {p.player_name}
+                      </span>
+                      <span className={styles.searchDropdownInfo}>
+                        {p.team_id} | {p.position}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {selectedWith && (
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "#4caf50",
+                    fontWeight: "bold",
+                    marginTop: "4px",
+                  }}
+                >
+                  Showing games WITH {selectedWith.name}
+                </p>
+              )}
+            </div>
+
+            {/* 2. WITHOUT TEAMMATE (Red) */}
+            <div className={styles.searchBarWrapper}>
+              <label
+                className={styles.filterLabel}
+                style={{
+                  color: "#e94560",
+                  marginBottom: "5px",
+                  display: "block",
+                }}
+              >
+                🚑 Without Teammate
+              </label>
+              <div
+                style={{ position: "relative", display: "flex", gap: "8px" }}
+              >
+                <input
+                  type="text"
+                  value={withoutQuery}
+                  onChange={(e) =>
+                    handleTeammateSearch("without", e.target.value)
+                  }
+                  onBlur={() =>
+                    setTimeout(() => setShowWithoutDropdown(false), 200)
+                  }
+                  onFocus={() =>
+                    withoutResults.length > 0 && setShowWithoutDropdown(true)
+                  }
+                  placeholder="Search teammate..."
+                  className={`${styles.searchInput} ${selectedWithout ? styles.searchInputActiveWithout : ""}`}
+                  style={{ flex: 1 }}
+                />
+                {selectedWithout && (
+                  <button
+                    onClick={() => clearTeammate("without")}
+                    className={styles.clearWithoutBtn}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {showWithoutDropdown && withoutResults.length > 0 && (
+                <ul className={styles.searchDropdown}>
+                  {withoutResults.map((p, i) => (
+                    <li
+                      key={`${p.player_id}-${i}`}
+                      onMouseDown={() => handleSelectTeammate("without", p)}
+                      className={styles.searchDropdownItem}
+                    >
+                      <span className={styles.searchDropdownName}>
+                        {p.player_name}
+                      </span>
+                      <span className={styles.searchDropdownInfo}>
+                        {p.team_id} | {p.position}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {selectedWithout && (
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "#e94560",
+                    fontWeight: "bold",
+                    marginTop: "4px",
+                  }}
+                >
+                  Showing games WITHOUT {selectedWithout.name}
+                </p>
+              )}
+            </div>
           </div>
           {/* LEAGUE FILTER */}
           <div className={styles.filterGroup}>

@@ -196,12 +196,16 @@ export async function fetchPlayerStats(
   season?: string,
   date?: string,
   opposingPlayerId?: string,
+  withTeammateId?: string,
+  withoutTeammateId?: string,
 ): Promise<PlayerGameStat[]> {
   let url = `${API_URL}/players/${playerId}/stats?limit=${limit}`;
   if (opponent) url += `&opponent=${opponent}`;
   if (season) url += `&season=${season}`;
   if (date) url += `&date=${date}`;
   if (opposingPlayerId) url += `&oppPlayer=${opposingPlayerId}`;
+  if (withTeammateId) url += `&withTeammate=${withTeammateId}`;
+  if (withoutTeammateId) url += `&withoutTeammate=${withoutTeammateId}`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch player stats");

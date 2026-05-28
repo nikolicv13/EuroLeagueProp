@@ -938,3 +938,72 @@ filterGroup {
 .clearOppBtn:hover {
   background: #d32f2f;
 }
+
+/* Teammate Toggle Buttons */
+.teammateToggle {
+  padding: 8px 12px;
+  background: white;
+  color: #666;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.teammateToggle:hover {
+  background: #f5f5f5;
+}
+
+.teammateToggleActive {
+  padding: 8px 12px;
+  background: #0f3460;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.searchInputActiveTeammate {
+  border-color: #0f3460 !important;
+  background-color: #f0f8ff !important;
+}
+
+/* WITH Teammate (Green) */
+.searchInputActiveWith {
+  border-color: #4caf50 !important;
+  background-color: #f1f8f1 !important;
+}
+.clearWithBtn {
+  padding: 0 12px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+}
+.clearWithBtn:hover {
+  background: #388e3c;
+}
+
+/* WITHOUT Teammate (Red) */
+.searchInputActiveWithout {
+  border-color: #e94560 !important;
+  background-color: #fffafa !important;
+}
+.clearWithoutBtn {
+  padding: 0 12px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+}
+.clearWithoutBtn:hover {
+  background: #d32f2f;
+}

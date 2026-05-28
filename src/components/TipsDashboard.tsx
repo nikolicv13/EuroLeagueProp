@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import type { Game, Tip } from "../api/api";
-import { fetchGames, fetchTips, fetchBrazilBetOdds } from "../api/api";
+import type { Game, Tip, PlayerSearchResult } from "../api/api";
+import {
+  fetchGames,
+  fetchTips,
+  fetchBrazilBetOdds,
+  fetchPlayerSearch,
+} from "../api/api";
 import TipCard from "./TipCard";
 import styles from "./TipsDashboard.module.css";
 
@@ -26,8 +31,49 @@ export default function TipsDashboard() {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
 
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [playerSearchQuery, setPlayerSearchQuery] = useState("");
+  const [playerSearchResults, setPlayerSearchResults] = useState<
+    PlayerSearchResult[]
+  >([]);
+  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+  const [selectedPlayerFilter, setSelectedPlayerFilter] =
+    useState<PlayerSearchResult | null>(null);
+
   const TIPS_PER_PAGE = 10;
   const testDate = "2026-05-24";
+
+  const handlePlayerSearchChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value;
+    setPlayerSearchQuery(value);
+    if (value.length >= 2) {
+      try {
+        const results = await fetchPlayerSearch(value);
+        setPlayerSearchResults(results);
+        setShowPlayerDropdown(true);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setPlayerSearchResults([]);
+      setShowPlayerDropdown(false);
+    }
+  };
+
+  const handleSelectPlayer = (player: PlayerSearchResult) => {
+    setSelectedPlayerFilter(player);
+    setPlayerSearchQuery(player.player_name);
+    setShowPlayerDropdown(false);
+    setCurrentPage(1); // Reset pagination
+  };
+
+  const clearPlayerFilter = () => {
+    setSelectedPlayerFilter(null);
+    setPlayerSearchQuery("");
+    setCurrentPage(1); // Reset pagination
+  };
 
   useEffect(() => {
     async function loadGames() {
@@ -96,12 +142,20 @@ export default function TipsDashboard() {
     let filtered = tips;
 
     if (viewMode === "odds") {
-      if (selectedJsonGameId !== "all")
+      if (selectedJsonGameId !== "all") {
         filtered = filtered.filter((t) => t.game_id === selectedJsonGameId);
-      if (selectedTeamFilter !== "all")
+      }
+      if (selectedTeamFilter !== "all") {
         filtered = filtered.filter(
           (t) => (t.team_abbr || t.team_id) === selectedTeamFilter,
         );
+      }
+
+      if (selectedPlayerFilter) {
+        filtered = filtered.filter(
+          (t) => t.player_id === selectedPlayerFilter.player_id,
+        );
+      }
     }
 
     const total = Math.ceil(filtered.length / TIPS_PER_PAGE);
@@ -109,7 +163,14 @@ export default function TipsDashboard() {
     const paginated = filtered.slice(startIndex, startIndex + TIPS_PER_PAGE);
 
     return { paginatedTips: paginated, totalPages: total };
-  }, [tips, viewMode, selectedJsonGameId, selectedTeamFilter, currentPage]);
+  }, [
+    tips,
+    viewMode,
+    selectedJsonGameId,
+    selectedTeamFilter,
+    currentPage,
+    selectedPlayerFilter,
+  ]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -247,6 +308,58 @@ export default function TipsDashboard() {
             )}
           </div>
         )}
+        {/* NEW: FILTER BY PLAYER */}
+        <div className={styles.playerSearchWrapper}>
+          <label className={styles.filterLabel}>Filter by Player</label>
+          <div className={styles.playerSearchRow}>
+            <input
+              type="text"
+              className={styles.filterInput}
+              style={{ flex: 1 }}
+              placeholder="Search player..."
+              value={playerSearchQuery}
+              onChange={handlePlayerSearchChange}
+              onBlur={() => setTimeout(() => setShowPlayerDropdown(false), 200)}
+              onFocus={() =>
+                playerSearchResults.length > 0 && setShowPlayerDropdown(true)
+              }
+            />
+            {selectedPlayerFilter && (
+              <button
+                onClick={clearPlayerFilter}
+                className={styles.clearPlayerBtn}
+                title="Clear player filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {showPlayerDropdown && playerSearchResults.length > 0 && (
+            <ul className={styles.playerDropdown}>
+              {playerSearchResults.map((p, index) => (
+                <li
+                  key={`${p.player_id}-${index}`}
+                  className={styles.playerDropdownItem}
+                  onMouseDown={() => handleSelectPlayer(p)} // Use onMouseDown to beat the onBlur timeout
+                >
+                  <span className={styles.playerDropdownName}>
+                    {p.player_name}
+                  </span>
+                  <span className={styles.playerDropdownInfo}>
+                    {p.team_id} | {p.position}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {selectedPlayerFilter && (
+            <p className={styles.statusSuccess} style={{ marginTop: "8px" }}>
+              🎯 Showing props for {selectedPlayerFilter.player_name}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* RIGHT MAIN AREA */}

@@ -135,6 +135,8 @@ app.get("/api/players/:id/stats", async (req, res) => {
     const seasonCode = req.query.season;
     const gameDate = req.query.date;
     const opposingPlayerId = req.query.oppPlayer;
+    const withTeammateId = req.query.withTeammate;
+    const withoutTeammateId = req.query.withoutTeammate;
 
     // 1. FIX: Define currentDate (use today if no date is provided)
     const currentDate = gameDate || new Date().toISOString().split("T")[0];
@@ -180,6 +182,30 @@ app.get("/api/players/:id/stats", async (req, res) => {
 
     let params = [playerId, currentDate];
     let paramIndex = 3; // 3 because $1 and $2 are already used above
+
+    if (withTeammateId) {
+      query += ` AND EXISTS (
+        SELECT 1 FROM box_scores bs2 
+        WHERE bs2.game_id = bs.game_id 
+          AND bs2.player_id = $${paramIndex} 
+          AND bs2.team_id = bs.team_id
+          AND bs2.minutes != 'DNP'
+      )`;
+      params.push(withTeammateId);
+      paramIndex++;
+    }
+
+    if (withoutTeammateId) {
+      query += ` AND NOT EXISTS (
+        SELECT 1 FROM box_scores bs2 
+        WHERE bs2.game_id = bs.game_id 
+          AND bs2.player_id = $${paramIndex} 
+          AND bs2.team_id = bs.team_id
+          AND bs2.minutes != 'DNP'
+      )`;
+      params.push(withoutTeammateId);
+      paramIndex++;
+    }
 
     if (opposingPlayerId) {
       query += ` AND EXISTS (
