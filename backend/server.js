@@ -134,6 +134,7 @@ app.get("/api/players/:id/stats", async (req, res) => {
     const opponent = req.query.opponent;
     const seasonCode = req.query.season;
     const gameDate = req.query.date;
+    const opposingPlayerId = req.query.oppPlayer;
 
     // 1. FIX: Define currentDate (use today if no date is provided)
     const currentDate = gameDate || new Date().toISOString().split("T")[0];
@@ -180,6 +181,18 @@ app.get("/api/players/:id/stats", async (req, res) => {
     let params = [playerId, currentDate];
     let paramIndex = 3; // 3 because $1 and $2 are already used above
 
+    if (opposingPlayerId) {
+      query += ` AND EXISTS (
+        SELECT 1 FROM box_scores bs2 
+        WHERE bs2.game_id = bs.game_id 
+          AND bs2.player_id = $${paramIndex} 
+          AND bs2.minutes != 'DNP'
+          AND bs2.team_id != bs.team_id
+      )`;
+      params.push(opposingPlayerId);
+      paramIndex++;
+    }
+
     // Add season filter if provided
     if (seasonCode) {
       query += ` AND g.season_code = $${paramIndex}`;
@@ -207,7 +220,7 @@ app.get("/api/players/:id/stats", async (req, res) => {
     const result = await pool.query(query, params);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "No stats found for this player" });
+      return res.json([]);
     }
 
     res.json(result.rows);

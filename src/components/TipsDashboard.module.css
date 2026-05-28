@@ -452,3 +452,47 @@
   min-width: 100px;
   text-align: center;
 }
+
+/* ==========================================
+   LEAGUE SELECT WITH LOGOS
+   ========================================== */
+.leagueSelectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.leagueSelectIcon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-45%);
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  pointer-events: none; /* Allows clicks to pass through to the select */
+  z-index: 1;
+}
+
+.leagueSelect {
+  padding-left: 42px !important; /* Make room for the icon */
+}
+
+/* Styling the options inside the dropdown (Works in Chrome/Edge) */
+.leagueSelect option {
+  padding: 8px 8px 8px 35px;
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  background-size: 20px 20px;
+}
+
+.leagueSelect option[value="631799"] {
+  background-image: url("/public/logos/euroleague.png");
+}
+
+.leagueSelect option[value="eurocup"] {
+  background-image: url("/public/logos/eurocup.png");
+}
+
+.leagueSelect option[value="nba"] {
+  background-image: url("public/logos/nba.png");
+}

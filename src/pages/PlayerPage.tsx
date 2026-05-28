@@ -325,6 +325,25 @@ export default function PlayerStats() {
   const [gameTips, setGameTips] = useState<Tip[]>([]);
   const [pendingTipData, setPendingTipData] = useState<Tip | null>(null);
 
+  const [oppPlayerQuery, setOppPlayerQuery] = useState(
+    searchParams.get("oppPlayerName") || "",
+  );
+  const [oppPlayerResults, setOppPlayerResults] = useState<
+    PlayerSearchResult[]
+  >([]);
+  const [showOppDropdown, setShowOppDropdown] = useState(false);
+  const [selectedOppPlayer, setSelectedOppPlayer] = useState<{
+    id: string;
+    name: string;
+  } | null>(
+    searchParams.get("oppPlayerId")
+      ? {
+          id: searchParams.get("oppPlayerId")!,
+          name: decodeURIComponent(searchParams.get("oppPlayerName") || ""),
+        }
+      : null,
+  );
+
   const handleLeagueToggle = (league: string) => {
     setSelectedLeagues((prev) => {
       if (prev.includes(league)) {
@@ -370,6 +389,46 @@ export default function PlayerStats() {
     setPendingTipData(null);
   };
 
+  const handleOppSearchChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value;
+    setOppPlayerQuery(value);
+    if (value.length >= 2) {
+      try {
+        const results = await fetchPlayerSearch(value);
+        setOppPlayerResults(results);
+        setShowOppDropdown(true);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setOppPlayerResults([]);
+      setShowOppDropdown(false);
+    }
+  };
+
+  const handleSelectOppPlayer = (player: PlayerSearchResult) => {
+    setSelectedOppPlayer({ id: player.player_id, name: player.player_name });
+    setOppPlayerQuery(player.player_name);
+    setShowOppDropdown(false);
+
+    // Update URL so filter persists on refresh
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("oppPlayerId", player.player_id);
+    newParams.set("oppPlayerName", encodeURIComponent(player.player_name));
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
+
+  const clearOppPlayer = () => {
+    setSelectedOppPlayer(null);
+    setOppPlayerQuery("");
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("oppPlayerId");
+    newParams.delete("oppPlayerName");
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
+
   // 5A. Fetch SEASON Stats (always runs)
   useEffect(() => {
     if (!tip.player_id) return;
@@ -381,6 +440,7 @@ export default function PlayerStats() {
         undefined,
         selectedSeason, // <-- Only fetch the selected season
         undefined,
+        selectedOppPlayer?.id,
       );
       const reversed = data.reverse();
 
@@ -406,7 +466,7 @@ export default function PlayerStats() {
     }
 
     loadSeasonStats();
-  }, [tip.player_id, tip.team_id, selectedSeason]);
+  }, [tip.player_id, tip.team_id, selectedSeason, selectedOppPlayer?.id]);
 
   // 5B. Fetch H2H Stats (runs when opponent is available)
   useEffect(() => {
@@ -848,9 +908,9 @@ export default function PlayerStats() {
             {/* Search Dropdown */}
             {showDropdown && searchResults.length > 0 && (
               <ul className={styles.searchDropdown}>
-                {searchResults.map((p) => (
+                {searchResults.map((p, index) => (
                   <li
-                    key={p.player_id}
+                    key={`${p.player_id}-${p.team_id}-${index}`}
                     onClick={() => handleSelectPlayer(p)}
                     className={styles.searchDropdownItem}
                   >
@@ -965,14 +1025,16 @@ export default function PlayerStats() {
                 tip.selection,
               )}
             />
-            <HitRateBox
-              label={`VS ${tip.opponent_team_id}`}
-              hr={calculateHitRate(
-                fullH2HChartData.map(getStatValue),
-                tip.line,
-                tip.selection,
-              )}
-            />
+            {!selectedOppPlayer && (
+              <HitRateBox
+                label={`VS ${tip.opponent_team_id}`}
+                hr={calculateHitRate(
+                  fullH2HChartData.map(getStatValue),
+                  tip.line,
+                  tip.selection,
+                )}
+              />
+            )}
           </div>
           {/* Game Filter Buttons */}
           <div className={styles.filterRow}>
@@ -1516,6 +1578,66 @@ export default function PlayerStats() {
               <option value="E2024">2024/25</option>
               <option value="E2023">2023/24</option>
             </select>
+          </div>
+          {/* 👇 NEW: OPPOSING PLAYER MATCHUP FILTER 👇 */}
+          <div
+            className={styles.searchBarWrapper}
+            style={{ marginTop: "10px" }}
+          >
+            <div style={{ position: "relative", display: "flex", gap: "8px" }}>
+              <input
+                type="text"
+                value={oppPlayerQuery}
+                onChange={handleOppSearchChange}
+                onBlur={() => setTimeout(() => setShowOppDropdown(false), 200)}
+                onFocus={() =>
+                  oppPlayerResults.length > 0 && setShowOppDropdown(true)
+                }
+                placeholder="Filter by opposing player..."
+                className={`${styles.searchInput} ${selectedOppPlayer ? styles.searchInputActive : ""}`}
+                style={{ flex: 1 }}
+              />
+              {selectedOppPlayer && (
+                <button
+                  onClick={clearOppPlayer}
+                  className={styles.clearOppBtn}
+                  title="Clear matchup filter"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {showOppDropdown && oppPlayerResults.length > 0 && (
+              <ul className={styles.searchDropdown}>
+                {oppPlayerResults.map((p, index) => (
+                  <li
+                    key={`${p.player_id}-${p.team_id}-${index}`}
+                    onClick={() => handleSelectOppPlayer(p)}
+                    className={styles.searchDropdownItem}
+                  >
+                    <span className={styles.searchDropdownName}>
+                      {p.player_name}
+                    </span>
+                    <span className={styles.searchDropdownInfo}>
+                      {p.team_id} | {p.position}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {selectedOppPlayer && (
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#e94560",
+                  fontWeight: "bold",
+                  marginTop: "5px",
+                }}
+              >
+                ⚔️ Showing games vs {selectedOppPlayer.name}
+              </p>
+            )}
           </div>
           {/* LEAGUE FILTER */}
           <div className={styles.filterGroup}>

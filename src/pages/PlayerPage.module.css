@@ -917,3 +917,24 @@ filterGroup {
   color: #666;
   font-weight: 500;
 }
+
+.searchInputActive {
+  border-color: #e94560 !important;
+  background-color: #fffafa !important;
+}
+
+.clearOppBtn {
+  padding: 0 12px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.clearOppBtn:hover {
+  background: #d32f2f;
+}

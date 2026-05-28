@@ -118,6 +118,13 @@ export default function TipsDashboard() {
     }
   };
 
+  const getLeagueLogo = (id: string) => {
+    if (id === "631799") return "euroleague";
+    if (id === "eurocup") return "eurocup";
+    if (id === "nba") return "nba";
+    return "placeholder"; // Fallback if needed
+  };
+
   return (
     <div className={styles.dashboardContainer}>
       {/* LEFT SIDEBAR */}
@@ -145,19 +152,32 @@ export default function TipsDashboard() {
           <div className={styles.sidebarSection}>
             <div>
               <label className={styles.filterLabel}>Select League</label>
-              <select
-                className={styles.filterSelect}
-                value={oddsLeagueId}
-                onChange={(e) => setOddsLeagueId(e.target.value)}
-              >
-                <option value="631799">Euroleague</option>
-                <option value="eurocup" disabled>
-                  Eurocup (Coming Soon)
-                </option>
-                <option value="nba" disabled>
-                  NBA (Coming Soon)
-                </option>
-              </select>
+              <div className={styles.leagueSelectWrapper}>
+                <img
+                  src={`/public/logos/${getLeagueLogo(oddsLeagueId)}.png`}
+                  alt="League Logo"
+                  className={styles.leagueSelectIcon}
+                  onError={(e) => {
+                    // Fallback if image is missing
+                    (e.currentTarget as HTMLImageElement).src =
+                      "/logos/placeholder.png";
+                  }}
+                />
+
+                <select
+                  className={`${styles.filterSelect} ${styles.leagueSelect}`}
+                  value={oddsLeagueId}
+                  onChange={(e) => setOddsLeagueId(e.target.value)}
+                >
+                  <option value="631799">Euroleague</option>
+                  <option value="eurocup" disabled>
+                    Eurocup (Coming Soon)
+                  </option>
+                  <option value="nba" disabled>
+                    NBA (Coming Soon)
+                  </option>
+                </select>
+              </div>
             </div>
 
             {jsonGames.length > 0 && (
