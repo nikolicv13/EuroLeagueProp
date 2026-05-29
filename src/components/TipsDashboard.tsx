@@ -224,6 +224,17 @@ export default function TipsDashboard() {
     return "placeholder"; // Fallback if needed
   };
 
+  const resetDashboardFilters = () => {
+    setSelectedJsonGameId("all");
+    setSelectedTeamFilter("all");
+    setSelectedPlayerFilter(null);
+    setPlayerSearchQuery("");
+    setSelectedPropFilter("all");
+    setMinOdds(1.0);
+    setMaxOdds(10.0);
+    setCurrentPage(1);
+  };
+
   return (
     <div className={styles.dashboardContainer}>
       {/* LEFT SIDEBAR */}
@@ -463,6 +474,14 @@ export default function TipsDashboard() {
             />
           </div>
         </div>
+
+        {/*  RESET BUTTON  */}
+        <button
+          onClick={resetDashboardFilters}
+          className={styles.resetFiltersBtn}
+        >
+          ↺ Reset All Filters
+        </button>
       </div>
 
       {/* RIGHT MAIN AREA */}

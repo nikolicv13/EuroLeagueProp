@@ -659,3 +659,21 @@
   transform: scale(1.2);
   background: #4caf50;
 }
+
+.resetFiltersBtn {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: #e94560;
+  border: 2px dashed #e94560;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 15px;
+}
+
+.resetFiltersBtn:hover {
+  background: #fffafa;
+}

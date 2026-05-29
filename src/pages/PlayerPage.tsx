@@ -956,6 +956,35 @@ export default function PlayerStats() {
     setLogPage(1);
   };
 
+  const resetPlayerFilters = () => {
+    // 1. Clear all local states
+    setVenueFilter("all");
+    setPhaseFilter("all");
+    setActiveFilter("10");
+
+    setSelectedOppPlayer(null);
+    setOppPlayerQuery("");
+
+    setSelectedWith(null);
+    setWithQuery("");
+
+    setSelectedWithout(null);
+    setWithoutQuery("");
+
+    // 2. Clean the URL (Keep base player info, remove all filters)
+    const newParams = new URLSearchParams();
+    newParams.set("propType", tip.market);
+    newParams.set("propAmount", String(tip.line));
+    newParams.set("overUnder", tip.selection);
+    newParams.set("oppTeam", tip.opponent_team_id);
+    newParams.set("oppName", tip.opponent);
+    newParams.set("teamId", tip.team_id);
+    newParams.set("position", tip.position || "");
+    newParams.set("season", tip.season);
+
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  };
+
   return (
     <div className={styles.pageLayout}>
       {/* ==========================================
@@ -1157,21 +1186,25 @@ export default function PlayerStats() {
           <div className={styles.filterRow}>
             {/* LEFT SIDE: Graph Length Filters */}
             <div className={styles.filterButtons}>
-              {(["5", "10", "15", "season", "h2h"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`${styles.filterButton} ${
-                    activeFilter === f ? styles.filterButtonActive : ""
-                  }`}
-                >
-                  {f === "h2h"
-                    ? "H2H"
-                    : f === "season"
-                      ? "Season"
-                      : `Last ${f}`}
-                </button>
-              ))}
+              {(["5", "10", "15", "season", "h2h"] as const).map((f) => {
+                if (f === "h2h" && selectedOppPlayer) return null;
+
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    className={`${styles.filterButton} ${
+                      activeFilter === f ? styles.filterButtonActive : ""
+                    }`}
+                  >
+                    {f === "h2h"
+                      ? "H2H"
+                      : f === "season"
+                        ? "Season"
+                        : `Last ${f}`}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {/* MAIN CHART: Market Stats */}
@@ -1930,6 +1963,14 @@ export default function PlayerStats() {
               Eurocup
             </label>
           </div>
+
+          {/* RESET MATCHUP FILTERS BUTTON  */}
+          <button
+            onClick={resetPlayerFilters}
+            className={styles.resetMatchupBtn}
+          >
+            RESET
+          </button>
         </div>
       </div>
     </div>

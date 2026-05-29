@@ -1007,3 +1007,21 @@ filterGroup {
 .clearWithoutBtn:hover {
   background: #d32f2f;
 }
+
+.resetMatchupBtn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #e94560;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.resetMatchupBtn:hover {
+  background: #fffafa;
+}
