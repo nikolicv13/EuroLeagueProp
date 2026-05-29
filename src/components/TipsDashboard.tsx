@@ -39,6 +39,7 @@ export default function TipsDashboard() {
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   const [selectedPlayerFilter, setSelectedPlayerFilter] =
     useState<PlayerSearchResult | null>(null);
+  const [selectedPropFilter, setSelectedPropFilter] = useState<string>("all");
 
   const TIPS_PER_PAGE = 10;
   const testDate = "2026-05-24";
@@ -73,6 +74,13 @@ export default function TipsDashboard() {
     setSelectedPlayerFilter(null);
     setPlayerSearchQuery("");
     setCurrentPage(1); // Reset pagination
+  };
+
+  const getMarketGroup = (market: string) => {
+    if (market.startsWith("points")) return "points";
+    if (market.startsWith("rebounds")) return "rebounds";
+    if (market.startsWith("assists")) return "assists";
+    return market;
   };
 
   useEffect(() => {
@@ -156,6 +164,12 @@ export default function TipsDashboard() {
           (t) => t.player_id === selectedPlayerFilter.player_id,
         );
       }
+
+      if (selectedPropFilter !== "all") {
+        filtered = filtered.filter(
+          (t) => getMarketGroup(t.market) === selectedPropFilter,
+        );
+      }
     }
 
     const total = Math.ceil(filtered.length / TIPS_PER_PAGE);
@@ -170,6 +184,7 @@ export default function TipsDashboard() {
     selectedTeamFilter,
     currentPage,
     selectedPlayerFilter,
+    selectedPropFilter,
   ]);
 
   const goToPage = (page: number) => {
@@ -359,6 +374,33 @@ export default function TipsDashboard() {
               🎯 Showing props for {selectedPlayerFilter.player_name}
             </p>
           )}
+        </div>
+        {/* NEW: FILTER BY PROP TYPE */}
+        <div>
+          <label className={styles.filterLabel}>Filter by Prop Type</label>
+          <select
+            className={styles.filterSelect}
+            value={selectedPropFilter}
+            onChange={(e) => {
+              setSelectedPropFilter(e.target.value);
+              setCurrentPage(1); // Reset to page 1 when filter changes
+            }}
+          >
+            <option value="all">All Props</option>
+
+            <option value="points">Points</option>
+            <option value="rebounds">Rebounds</option>
+            <option value="assists">Assists</option>
+            <option value="threes_made">3PT Made</option>
+
+            <option value="pra">P + R + A</option>
+            <option value="pa">P + A</option>
+            <option value="pr">P + R</option>
+            <option value="ra">R + A</option>
+
+            <option value="steals">Steals</option>
+            <option value="blocks">Blocks</option>
+          </select>
         </div>
       </div>
 
