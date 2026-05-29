@@ -41,6 +41,9 @@ export default function TipsDashboard() {
     useState<PlayerSearchResult | null>(null);
   const [selectedPropFilter, setSelectedPropFilter] = useState<string>("all");
 
+  const [minOdds, setMinOdds] = useState(1.0);
+  const [maxOdds, setMaxOdds] = useState(10.0);
+
   const TIPS_PER_PAGE = 10;
   const testDate = "2026-05-24";
 
@@ -68,6 +71,27 @@ export default function TipsDashboard() {
     setPlayerSearchQuery(player.player_name);
     setShowPlayerDropdown(false);
     setCurrentPage(1); // Reset pagination
+  };
+
+  const handleMinOddsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Math.min(Number(e.target.value), maxOdds - 0.05);
+    setMinOdds(val);
+    setCurrentPage(1);
+  };
+
+  const handleMaxOddsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Math.max(Number(e.target.value), minOdds + 0.05);
+    setMaxOdds(val);
+    setCurrentPage(1);
+  };
+
+  // Helper to calculate the colored track position
+  const getTrackStyle = () => {
+    const min = 1.0;
+    const max = 10.0;
+    const leftPercent = ((minOdds - min) / (max - min)) * 100;
+    const rightPercent = 100 - ((maxOdds - min) / (max - min)) * 100;
+    return { left: `${leftPercent}%`, right: `${rightPercent}%` };
   };
 
   const clearPlayerFilter = () => {
@@ -150,26 +174,23 @@ export default function TipsDashboard() {
     let filtered = tips;
 
     if (viewMode === "odds") {
-      if (selectedJsonGameId !== "all") {
+      if (selectedJsonGameId !== "all")
         filtered = filtered.filter((t) => t.game_id === selectedJsonGameId);
-      }
-      if (selectedTeamFilter !== "all") {
+      if (selectedTeamFilter !== "all")
         filtered = filtered.filter(
           (t) => (t.team_abbr || t.team_id) === selectedTeamFilter,
         );
-      }
-
-      if (selectedPlayerFilter) {
+      if (selectedPlayerFilter)
         filtered = filtered.filter(
           (t) => t.player_id === selectedPlayerFilter.player_id,
         );
-      }
-
-      if (selectedPropFilter !== "all") {
+      if (selectedPropFilter !== "all")
         filtered = filtered.filter(
           (t) => getMarketGroup(t.market) === selectedPropFilter,
         );
-      }
+
+      // 👇 NEW: Filter by Odds Range
+      filtered = filtered.filter((t) => t.odds >= minOdds && t.odds <= maxOdds);
     }
 
     const total = Math.ceil(filtered.length / TIPS_PER_PAGE);
@@ -185,6 +206,8 @@ export default function TipsDashboard() {
     currentPage,
     selectedPlayerFilter,
     selectedPropFilter,
+    minOdds,
+    maxOdds,
   ]);
 
   const goToPage = (page: number) => {
@@ -230,7 +253,7 @@ export default function TipsDashboard() {
               <label className={styles.filterLabel}>Select League</label>
               <div className={styles.leagueSelectWrapper}>
                 <img
-                  src={`/public/logos/${getLeagueLogo(oddsLeagueId)}.png`}
+                  src={`/logos/${getLeagueLogo(oddsLeagueId)}.png`}
                   alt="League Logo"
                   className={styles.leagueSelectIcon}
                   onError={(e) => {
@@ -401,6 +424,44 @@ export default function TipsDashboard() {
             <option value="steals">Steals</option>
             <option value="blocks">Blocks</option>
           </select>
+        </div>
+
+        {/* NEW: FILTER BY ODDS RANGE */}
+        <div className={styles.oddsSliderContainer}>
+          <label className={styles.filterLabel}>Filter by Odds</label>
+
+          <div className={styles.oddsSliderValues}>
+            <span>{minOdds.toFixed(2)}</span>
+            <span>{maxOdds.toFixed(2)}</span>
+          </div>
+
+          <div className={styles.rangeSlider}>
+            {/* Colored active track */}
+            <div
+              className={styles.rangeTrackActive}
+              style={getTrackStyle()}
+            ></div>
+
+            {/* Min Thumb */}
+            <input
+              type="range"
+              min="1.00"
+              max="10.00"
+              step="0.05"
+              value={minOdds}
+              onChange={handleMinOddsChange}
+            />
+
+            {/* Max Thumb */}
+            <input
+              type="range"
+              min="1.00"
+              max="10.00"
+              step="0.05"
+              value={maxOdds}
+              onChange={handleMaxOddsChange}
+            />
+          </div>
         </div>
       </div>
 
