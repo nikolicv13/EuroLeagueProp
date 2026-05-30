@@ -9,8 +9,8 @@ import {
   fetchDefenseRankings,
   fetchPlayerSearch,
   fetchPlayerStats,
-  fetchTips,
   fetchSimilarPlayers,
+  fetchBrazilBetOdds,
 } from "../api/api";
 import type {
   PlayerGameStat,
@@ -293,6 +293,7 @@ export default function PlayerStats() {
     season: getParam("season", savedState?.season_code || "E2025"),
   };
   const [stats, setStats] = useState<PlayerGameStat[]>([]);
+
   const [h2hStats, setH2hStats] = useState<PlayerGameStat[]>([]);
   const [activeFilter, setActiveFilter] = useState<
     "5" | "10" | "15" | "h2h" | "season"
@@ -462,37 +463,116 @@ export default function PlayerStats() {
     });
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const targetPlayerId = selectedPlayerId || playerId;
     const newAmount = inputLine !== undefined ? inputLine : tip.line;
 
-    const oppTeam = pendingTipData?.opponent_team_id || tip.opponent_team_id;
-    const oppName = pendingTipData?.opponent || tip.opponent;
-    const teamId = pendingTipData?.team_id || tip.team_id;
-    const position = pendingTipData?.position || tip.position;
+    // 1. Default to current tip data
+    let oppTeam = tip.opponent_team_id;
+    let oppName = tip.opponent;
+    let teamId = tip.team_id;
+    let position = tip.position;
     const season = tip.season;
+    let newPlayerName = tip.player;
 
-    let newState = { ...savedState };
-    if (pendingTipData) {
-      const gameId = pendingTipData.id.split("_")[0];
-      newState = {
-        ...newState,
-        player_id: pendingTipData.player_id,
-        player: pendingTipData.player,
-        position: position,
-        team_id: teamId,
-        opponent_team_id: oppTeam,
-        opponent: oppName,
-        game_id: gameId,
-        season_code: season,
-      };
+    // 2. IF A NEW PLAYER WAS SELECTED FROM THE SEARCH BAR
+    if (selectedPlayerId && selectedPlayerId !== playerId) {
+      // Get their name from the search results
+      const searchedPlayer = searchResults.find(
+        (p: PlayerSearchResult) => p.player_id === selectedPlayerId,
+      );
+      if (searchedPlayer) newPlayerName = searchedPlayer.player_name;
+
+      try {
+        const leagueId = searchParams.get("leagueId") || "631799";
+        const allOdds = await fetchBrazilBetOdds(leagueId);
+
+        // Find ANY tip for this player in the live odds
+        const liveTip = allOdds.find(
+          (t: Tip) => t.player_id === selectedPlayerId,
+        );
+
+        if (liveTip) {
+          teamId = liveTip.team_id || "";
+          position = liveTip.position || "";
+          oppTeam = liveTip.opponent_team_id || "";
+          oppName = liveTip.opponent || "";
+        } else {
+          // Fallback: Player has no live odds right now. Use DB search data and clear opponent.
+          if (searchedPlayer) {
+            teamId = searchedPlayer.team_id;
+            position = searchedPlayer.position;
+          }
+          oppTeam = "";
+          oppName = "";
+        }
+      } catch {
+        // If JSON fetch fails, fallback to DB search data
+        if (searchedPlayer) {
+          teamId = searchedPlayer.team_id;
+          position = searchedPlayer.position;
+        }
+        oppTeam = "";
+        oppName = "";
+      }
+    }
+    // 3. IF A SIDEBAR TIP WAS CLICKED
+    else if (pendingTipData) {
+      oppTeam = pendingTipData.opponent_team_id || "";
+      oppName = pendingTipData.opponent || "";
+      teamId = pendingTipData.team_id || "";
+      position = pendingTipData.position || "";
+      newPlayerName = pendingTipData.player;
     }
 
-    navigate(
-      `/player-stats/${targetPlayerId}?propType=${inputMarket}&propAmount=${isNaN(newAmount) ? tip.line : newAmount}&overUnder=${inputOverUnder}&oppTeam=${oppTeam}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${position}&season=${season}`,
-      { state: newState },
+    // 4. Build clean URL params
+    const newParams = new URLSearchParams();
+    newParams.set("propType", inputMarket);
+    newParams.set(
+      "propAmount",
+      isNaN(newAmount as number) ? String(tip.line) : String(newAmount),
     );
+    newParams.set("overUnder", inputOverUnder);
 
+    if (oppTeam) newParams.set("oppTeam", oppTeam);
+    if (oppName) newParams.set("oppName", encodeURIComponent(oppName));
+    if (teamId) newParams.set("teamId", teamId);
+    if (position) newParams.set("position", position);
+    newParams.set("season", season);
+
+    // 5. Keep matchup filters ONLY if we are searching the SAME player
+    if (!selectedPlayerId || selectedPlayerId === playerId) {
+      if (searchParams.get("oppPlayerId"))
+        newParams.set("oppPlayerId", searchParams.get("oppPlayerId")!);
+      if (searchParams.get("oppPlayerName"))
+        newParams.set("oppPlayerName", searchParams.get("oppPlayerName")!);
+      if (searchParams.get("withId"))
+        newParams.set("withId", searchParams.get("withId")!);
+      if (searchParams.get("withName"))
+        newParams.set("withName", searchParams.get("withName")!);
+      if (searchParams.get("withoutId"))
+        newParams.set("withoutId", searchParams.get("withoutId")!);
+      if (searchParams.get("withoutName"))
+        newParams.set("withoutName", searchParams.get("withoutName")!);
+    }
+
+    // 6. Navigate to the new URL
+    navigate(`/player-stats/${targetPlayerId}?${newParams.toString()}`, {
+      state: {
+        player_id: targetPlayerId,
+        player: newPlayerName,
+        position: position,
+        market: inputMarket,
+        line: newAmount,
+        selection: inputOverUnder,
+        opponent_team_id: oppTeam,
+        opponent: oppName,
+        team_id: teamId,
+        season_code: season,
+      },
+    });
+
+    // Reset local search states
     setSelectedPlayerId(null);
     setPendingTipData(null);
   };
@@ -652,21 +732,40 @@ export default function PlayerStats() {
     loadDefense();
   }, [tip.opponent_team_id, tip.position, defenseLimit]);
 
+  // Fetch LIVE JSON Odds for the Sidebar
   useEffect(() => {
-    const gameId = savedState?.game_id;
-    if (!gameId) return;
+    // 1. Get the league ID from the URL (defaults to Euroleague)
+    const leagueId = searchParams.get("leagueId") || "631799";
+    const currentGameId = tip.game_id;
 
-    async function loadGameTips(id: string) {
+    if (!currentGameId) return;
+
+    async function loadLiveOdds() {
       try {
-        const tips = await fetchTips(id);
-        setGameTips(tips);
+        // 2. Fetch ALL odds for the league (from JSON/API)
+        const allOdds = await fetchBrazilBetOdds(leagueId);
+
+        // 3. Filter to only show tips for THIS specific game
+        let filteredOdds = allOdds.filter(
+          (t: Tip) => t.game_id === currentGameId,
+        );
+
+        // Fallback: If game_id doesn't match perfectly, show all props for this team
+        if (filteredOdds.length === 0) {
+          filteredOdds = allOdds.filter(
+            (t: Tip) =>
+              t.team_id === tip.team_id || t.opponent_team_id === tip.team_id,
+          );
+        }
+
+        setGameTips(filteredOdds);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load live odds for sidebar:", err);
       }
     }
 
-    loadGameTips(gameId);
-  }, [savedState?.game_id]);
+    loadLiveOdds();
+  }, [tip.game_id, tip.team_id, tip.opponent_team_id, searchParams]);
 
   // 7. Fetch Similar Players
 
