@@ -5,7 +5,7 @@ import PlayerPage from "./pages/PlayerPage";
 import ParlayBuilderPage from "./pages/ParleyBuilderPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactsPage";
-import TypsDashboard from "./components/TipsDashboard";
+import TypsDashboard from "./components/dashboard/TipsDashboard";
 
 export default function App() {
   return (

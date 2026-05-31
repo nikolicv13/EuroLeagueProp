@@ -20,7 +20,7 @@ import type {
   SimilarPlayer,
   PlayerSearchResult,
   Tip,
-} from "../api/api";
+} from "../api/types";
 import {
   BarChart,
   Bar,

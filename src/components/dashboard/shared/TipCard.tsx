@@ -59,7 +59,7 @@ type TipLike = {
 
 type Props = {
   tip: TipLike;
-  dateLabel: string; // e.g. "Wed 7:00 PM ET" or "2026-04-29"
+  dateLabel: string; //  "Wed 7:00 PM ET" or "2026-04-29"
   onViewStats?: (tip: TipLike) => void;
   onGameReport?: (tip: TipLike) => void;
 };
@@ -75,7 +75,7 @@ function formatStartTime(isoString: string) {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-      timeZone: "Europe/Belgrade", // <-- This forces it to show CET/CEST (Euroleague time)
+      timeZone: "Europe/Belgrade",
     });
   } catch {
     return isoString;

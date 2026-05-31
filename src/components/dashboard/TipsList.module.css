@@ -1,0 +1,158 @@
+.mainContent {
+  flex: 1;
+  padding: 20px 0px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+.mainTitle {
+  margin-top: 0;
+}
+
+/* Tips Grid/List */
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  transform: translateX(-140px);
+}
+
+/* Loading & Empty States */
+.loadingText,
+.loadingSpinner {
+  text-align: center;
+  margin-top: 50px;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+.emptyText,
+.noTips {
+  text-align: center;
+  margin-top: 50px;
+  padding: 40px;
+  color: #999;
+  font-size: 15px;
+}
+
+.noTips button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Pagination Controls */
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 30px auto 20px auto;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  transform: translateX(-140px);
+}
+
+.paginationBtn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+.paginationBtnDisabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: #aaa;
+  border-color: #e0e0e0;
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #666;
+  font-weight: bold;
+  min-width: 100px;
+  text-align: center;
+}
+
+.resultsCount {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  padding: 5px 0 20px;
+}
+
+/* Alternative Pagination Styles (if you use the numbered buttons elsewhere) */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin: 20px 0;
+  padding: 10px;
+}
+
+.paginationButton {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paginationButton:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+.paginationButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginationButtonActive {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+  font-weight: bold;
+}
+
+.paginationButtonActive:hover {
+  background: #45a049;
+}
+
+.paginationEllipsis {
+  border: none;
+  background: transparent;
+  cursor: default;
+  color: #999;
+}
