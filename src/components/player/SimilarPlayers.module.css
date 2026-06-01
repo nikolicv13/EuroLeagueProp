@@ -1,0 +1,54 @@
+.similarPlayersContainer {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
+}
+.similarPlayersTitle {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #333;
+}
+.similarPlayerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+.similarPlayerRow:last-child {
+  border-bottom: none;
+}
+.similarPlayerInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.similarPlayerTeamLogo {
+  width: 24px;
+  height: 24px;
+}
+.similarPlayerName {
+  font-weight: bold;
+  font-size: 14px;
+  color: #333;
+}
+.similarPlayerStats {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+}
+.similarPlayerAvg {
+  color: #888;
+}
+.similarPlayerGameStatOver {
+  font-weight: bold;
+  color: #4caf50;
+}
+.similarPlayerGameStatUnder {
+  font-weight: bold;
+  color: #e94560;
+}

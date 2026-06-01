@@ -1,0 +1,33 @@
+.hitRateBox {
+  text-align: center;
+  background: #f0f0f0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  min-width: 70px;
+}
+
+.hitRateLabel {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: bold;
+}
+
+.hitRatePercent {
+  font-size: 1.125rem;
+  font-weight: bold;
+}
+
+.hitRatePercentHigh {
+  color: green;
+}
+.hitRatePercentMid {
+  color: #333;
+}
+.hitRatePercentLow {
+  color: #e94560;
+}
+
+.hitRateFraction {
+  font-size: 0.75rem;
+  color: #888;
+}

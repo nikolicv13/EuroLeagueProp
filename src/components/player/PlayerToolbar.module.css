@@ -1,0 +1,137 @@
+.backButton {
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 6px;
+}
+
+/* Search Bar */
+.searchBarWrapper {
+  position: relative;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.searchInput {
+  font-size: 1.5rem;
+  font-weight: bold;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 5px 0;
+  border-bottom: 2px solid #0f3460;
+  background: transparent;
+}
+
+.searchDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.searchDropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.searchDropdownItem:hover {
+  background: #f0f0f0;
+}
+
+.searchDropdownName {
+  font-weight: bold;
+  color: #333;
+}
+
+.searchDropdownInfo {
+  color: #888;
+  font-size: 0.875rem;
+}
+
+/* Toolbar Controls */
+.toolbar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap;
+}
+
+.toolbarSelect,
+.toolbarSelectOver,
+.toolbarSelectUnder {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.toolbarSelectOver {
+  background: #4caf50;
+}
+.toolbarSelectUnder {
+  background: #e94560;
+}
+
+.toolbarLineInput {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  width: 5rem;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.toolbarPropSelect {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.toolbarSearchBtn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: #0f3460;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbarOpponentInfo {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: #666;
+}

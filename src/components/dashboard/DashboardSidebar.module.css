@@ -186,11 +186,6 @@
   position: relative;
 }
 
-.playerSearchRow {
-  display: flex;
-  gap: 8px;
-}
-
 .playerDropdown {
   position: absolute;
   top: 100%;
@@ -235,40 +230,28 @@
   border-radius: 4px;
 }
 
-.clearPlayerBtn {
-  padding: 0 12px;
-  background: #e94560;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-.clearPlayerBtn:hover {
-  background: #d32f2f;
-}
-
 /* Reset Button */
 .resetFiltersBtn {
   width: 100%;
-  padding: 10px;
-  background: transparent;
-  color: #e94560;
-  border: 2px dashed #e94560;
+  padding: 8px 16px;
+  background: white;
+  color: #333;
+  border: 1px solid #333; /* Changed from 2px dashed to 1px solid */
   border-radius: 6px;
-  font-weight: bold;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 12px;
+
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 15px;
-  margin-top: 10px;
+  margin-top: 15px;
+  margin-bottom: 0;
 }
 
 .resetFiltersBtn:hover {
   background: #fffafa;
+  color: #d32f2f; /* Slightly darker red on hover */
+  border-color: #d32f2f;
 }
 
 /* Extra Utility Styles (if used elsewhere in sidebar) */
@@ -334,6 +317,45 @@
 .manualButton:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* Wrapper to hold input and absolute button */
+.inputWithClear {
+  position: relative;
+  width: 100%;
+}
+
+/* Add padding to the right when the X button is visible so text doesn't overlap */
+.filterInputActive {
+  padding-right: 32px !important;
+}
+
+/* The small X button inside the input */
+.clearInputBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+/* Nice subtle hover effect */
+.clearInputBtn:hover {
+  background: #e0e0e0;
+  color: #e94560; /* Turns red on hover */
 }
 
 .dataSourceIndicator {

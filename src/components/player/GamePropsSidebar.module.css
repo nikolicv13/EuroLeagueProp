@@ -1,0 +1,67 @@
+.sidebar {
+  width: 16rem;
+  min-width: 16rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 15px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  position: sticky;
+  top: 20px;
+}
+
+.sidebarTitle {
+  margin-top: 0;
+  font-size: 0.875rem;
+  color: #666;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.sidebarItem {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.sidebarItem:hover {
+  background: #f0f0f0;
+  border-color: #ddd;
+}
+
+.sidebarItemActive {
+  background: #e8f0fe;
+  border-color: #0f3460;
+}
+
+.sidebarPlayerName {
+  font-size: 0.8125rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.sidebarPropText {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.sidebarPositionText {
+  font-size: 0.6875rem;
+  color: #888;
+  font-weight: normal;
+}
+
+.sidebarOuOver {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.sidebarOuUnder {
+  color: #e94560;
+  font-weight: bold;
+}

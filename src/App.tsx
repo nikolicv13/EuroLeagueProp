@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layout/AppLayout";
 
-import PlayerPage from "./pages/PlayerPage";
+import PlayerPage from "./components/player/PlayerStats";
 import ParlayBuilderPage from "./pages/ParleyBuilderPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactsPage";

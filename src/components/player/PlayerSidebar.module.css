@@ -1,0 +1,270 @@
+.filtersColumn {
+  width: 24rem;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-top: 5rem;
+  padding-left: 3rem;
+  margin-right: 3rem;
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
+}
+.filterTitle {
+  margin: 0px;
+}
+.filterParagraph {
+  margin: 0px;
+  margin-top: -12px;
+  color: rgb(146, 140, 140);
+}
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.filterGroupLabel,
+.filterLabel {
+  font-size: 0.6875rem;
+  font-weight: bold;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Venue & Phase Toggles */
+.venueToggleGroup {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.venueToggleButton,
+.venueToggleButtonActive {
+  flex: 1;
+  padding: 8px 0;
+  background: white;
+  border: none;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #666;
+  text-align: center;
+  transition: all 0.2s;
+}
+.venueToggleButtonActive {
+  background: #0f3460;
+  color: white;
+  border-right: 1px solid #0f3460;
+}
+.venueToggleButtonActive:last-child,
+.venueToggleButton:last-child {
+  border-right: none;
+}
+
+/* Checkboxes & Dropdowns */
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: #333;
+  padding: 4px 0;
+}
+.checkboxItem input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #0f3460;
+}
+.checkboxItemDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.checkboxItemDisabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+.seasonDropdown {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  background: white;
+}
+
+/* Search Bars (Duplicated for Module Scoping) */
+.searchBarWrapper {
+  position: relative;
+  margin-bottom: 10px;
+  width: 100%;
+}
+.searchInput {
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 5px 0;
+  border-bottom: 2px solid #0f3460;
+  background: transparent;
+}
+.searchDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.searchDropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.searchDropdownItem:hover {
+  background: #f0f0f0;
+}
+.searchDropdownName {
+  font-weight: bold;
+  color: #333;
+}
+.searchDropdownInfo {
+  color: #888;
+  font-size: 0.875rem;
+}
+
+/* Active States & Clear Buttons */
+
+.searchInputActiveWith {
+  border-color: #4caf50 !important;
+  background-color: #f1f8f1 !important;
+}
+
+.searchInputActiveWithout {
+  border-color: #e94560 !important;
+  background-color: #fffafa !important;
+}
+.clearWithoutBtn {
+  padding: 0 12px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+}
+.clearWithoutBtn:hover {
+  background: #d32f2f;
+}
+/* Standard Input Style (Matches Dashboard) */
+.filterInput {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: white;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: #0f3460;
+}
+
+/* Wrapper for relative positioning of the X button */
+.inputWithClear {
+  position: relative;
+  width: 100%;
+}
+
+/* The small inner X button */
+.clearInputBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.clearInputBtn:hover {
+  background: #e0e0e0;
+  color: #e94560;
+}
+
+/* Active States (Color-coded when a filter is applied) */
+.filterInputActiveOpp {
+  padding-right: 32px !important;
+  border-color: #e94560 !important;
+  background-color: #fffafa !important;
+}
+
+.filterInputActiveWith {
+  padding-right: 32px !important;
+  border-color: #4caf50 !important;
+  background-color: #f1f8f1 !important;
+}
+
+.filterInputActiveWithout {
+  padding-right: 32px !important;
+  border-color: #e94560 !important;
+  background-color: #fffafa !important;
+}
+
+/* Reset */
+.resetMatchupBtn {
+  padding: 8px 16px;
+  background: white;
+  color: #333;
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+  width: 100%;
+}
+.resetMatchupBtn:hover {
+  background: #fffafa;
+}

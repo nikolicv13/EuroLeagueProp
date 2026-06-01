@@ -1,0 +1,108 @@
+.gameLogContainer {
+  margin-top: 40px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.gameLogTitle {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #16213e;
+}
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.gameLogTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 1000px;
+}
+.gameLogTable th {
+  background: #16213e;
+  color: white;
+  padding: 10px 8px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gameLogTable td {
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap;
+}
+.gameLogTable tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.lossRow {
+  background-color: #fffafa;
+}
+.oppCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: bold;
+}
+.logLogo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.statCell {
+  font-weight: bold;
+  color: #16213e;
+}
+.winText {
+  color: #4caf50;
+  font-weight: bold;
+}
+.lossText {
+  color: #e94560;
+  font-weight: bold;
+}
+.pirCell {
+  font-weight: bold;
+  background: #f5f5f5;
+  color: #0f3460;
+}
+
+.logPagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+.logPageBtn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.logPageBtn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+.logPageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.logPageInfo {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}

@@ -1,0 +1,121 @@
+.defenseFilterWrapper {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1.25rem;
+}
+.defenseFilterBtn,
+.defenseFilterBtnActive,
+.defenseFilterBtnInactive {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.8125rem;
+}
+.defenseFilterBtnActive {
+  background: #0f3460;
+  color: white;
+}
+.defenseFilterBtnInactive {
+  background: #e0e0e0;
+  color: black;
+}
+
+.defenseContainer {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.defenseTitle {
+  margin-top: 0;
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+.defenseGrid,
+.defenseRow,
+.defenseRowBottom {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.defenseRow {
+  margin-bottom: 10px;
+}
+
+/* Defense Boxes */
+.defenseBox,
+.defenseBoxActive {
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: transparent;
+  border: 2px solid transparent;
+  min-width: 5rem;
+}
+.defenseBoxActive {
+  background: #f0f0f0;
+  border: 2px solid #333;
+}
+.defenseBoxLabel {
+  font-size: 0.875rem;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 5px;
+}
+.defenseBoxValue {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #333;
+}
+.defenseBoxRank,
+.defenseBoxTrend {
+  font-size: 0.6875rem;
+  font-weight: bold;
+  margin-top: 4px;
+}
+.defenseBoxTrendAvg {
+  font-size: 0.5625rem;
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+/* Legend */
+.defenseLegend {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+.defenseLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.defenseLegendColor,
+.defenseLegendColorGreen,
+.defenseLegendColorRed,
+.defenseLegendColorGray {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.defenseLegendColorGreen {
+  background: #4caf50;
+}
+.defenseLegendColorRed {
+  background: #e94560;
+}
+.defenseLegendColorGray {
+  background: #888888;
+}

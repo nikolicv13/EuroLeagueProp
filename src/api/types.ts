@@ -180,3 +180,59 @@ export interface JsonGame {
   team: string;
   opponent: string;
 }
+
+export interface LocationState {
+  player_id: string;
+  player: string;
+  position: string;
+  market: string;
+  line: number;
+  selection: "over" | "under";
+  opponent_team_id: string;
+  opponent: string;
+  team_id: string;
+  game_id: string;
+  season_code: string;
+  start_time: string;
+  hit_rates?: {
+    season: { hits: number; attempts: number; rate: number };
+    last5: { hits: number; attempts: number; rate: number };
+    last10: { hits: number; attempts: number; rate: number };
+    last15: { hits: number; attempts: number; rate: number };
+    vs_opp?: { hits: number; attempts: number; rate: number };
+  };
+}
+
+export interface CurrentTip {
+  player_id: string;
+  player?: string;
+  market: string;
+  line: number;
+  selection: "over" | "under";
+  opponent_team_id: string;
+  opponent?: string;
+  team_id: string;
+  position: string;
+  season: string;
+  game_id?: string;
+}
+
+export interface ChartDataPoint extends PlayerGameStat {
+  parsedMinutes: number;
+  fga: number;
+  opponent_id: string;
+  dateFormatted: string;
+  steals: number;
+  blocks: number;
+  pa: number;
+  pr: number;
+  ra: number;
+  pra: number;
+}
+
+export interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: ChartDataPoint }>;
+  marketKeyStr: string;
+  marketLabelStr: string;
+}

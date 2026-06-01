@@ -134,9 +134,6 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
               </select>
             </div>
           )}
-          <p className={styles.statusSuccess}>
-            ✅ Currently showing mock/live odds data.
-          </p>
         </div>
       ) : (
         <div className={styles.sidebarSection}>
@@ -164,11 +161,13 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
       {/* PLAYER SEARCH */}
       <div className={styles.playerSearchWrapper}>
         <label className={styles.filterLabel}>Filter by Player</label>
-        <div className={styles.playerSearchRow}>
+
+        {/* 👇 NEW WRAPPER for the input and the inner X button */}
+        <div className={styles.inputWithClear}>
           <input
             type="text"
-            className={styles.filterInput}
-            style={{ flex: 1 }}
+            // Add active class when a player is selected to make room for the X
+            className={`${styles.filterInput} ${props.selectedPlayerFilter ? styles.filterInputActive : ""}`}
             placeholder="Search player..."
             value={props.playerSearchQuery}
             onChange={props.handlePlayerSearchChange}
@@ -183,7 +182,7 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
           {props.selectedPlayerFilter && (
             <button
               onClick={props.clearPlayerFilter}
-              className={styles.clearPlayerBtn}
+              className={styles.clearInputBtn}
               title="Clear player filter"
             >
               ✕
@@ -208,11 +207,6 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
               </li>
             ))}
           </ul>
-        )}
-        {props.selectedPlayerFilter && (
-          <p className={styles.statusSuccess} style={{ marginTop: "8px" }}>
-            🎯 Showing props for {props.selectedPlayerFilter.player_name}
-          </p>
         )}
       </div>
 
@@ -253,7 +247,7 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
         onClick={props.resetDashboardFilters}
         className={styles.resetFiltersBtn}
       >
-        ↺ Reset All Filters
+        Reset
       </button>
     </div>
   );
