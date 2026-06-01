@@ -1,0 +1,110 @@
+.headerContainer {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.teamLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.teamInfoLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teamInfo {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.playerName {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #16213e;
+  margin: 0;
+}
+
+.propBadge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #16213e;
+}
+
+/* Dark Themed Averages Box */
+.averagesBox {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.averagesTitle {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #8892b0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.averagesStats {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  width: 100%;
+}
+
+.avgItem {
+  text-align: center;
+}
+
+.avgLabel {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #8892b0;
+  margin-bottom: 4px;
+}
+
+.avgValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+.opponentInfo {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

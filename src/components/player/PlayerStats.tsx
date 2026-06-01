@@ -30,6 +30,7 @@ import DefenseSection from "./DefenseSection";
 import SimilarPlayersSection from "./SimilarPlayersSection";
 import GameLogTable from "./GameLogTable";
 import PlayerSidebar from "./PlayerSidebar";
+import PlayerHeader, { type SeasonAverages } from "./PlayerHeader";
 import styles from "./PlayerStats.module.css";
 
 export default function PlayerStats() {
@@ -651,6 +652,40 @@ export default function PlayerStats() {
   }, [activeFilter, fullSeasonChartData, fullH2HChartData]);
   const chartData = useMemo(() => displayedStats, [displayedStats]);
 
+  const seasonAverages = useMemo<SeasonAverages | null>(() => {
+    if (fullSeasonChartData.length === 0) return null;
+    const len = fullSeasonChartData.length;
+    return {
+      pts:
+        fullSeasonChartData.reduce(
+          (sum, g) => sum + (Number(g.points) || 0),
+          0,
+        ) / len,
+      reb:
+        fullSeasonChartData.reduce(
+          (sum, g) => sum + (Number(g.total_rebounds) || 0),
+          0,
+        ) / len,
+      ast:
+        fullSeasonChartData.reduce(
+          (sum, g) => sum + (Number(g.assists) || 0),
+          0,
+        ) / len,
+    };
+  }, [fullSeasonChartData]);
+
+  // 2. Generate dynamic title based on Venue & Phase filters
+  const averagesTitle = useMemo(() => {
+    const parts: string[] = [];
+    if (venueFilter !== "all")
+      parts.push(venueFilter === "home" ? "Home" : "Away");
+    if (phaseFilter !== "all")
+      parts.push(phaseFilter === "playoffs" ? "Playoffs" : "Regular Season");
+
+    if (parts.length === 0) return "Regular Season Averages";
+    return `${parts.join(" ")} Averages`;
+  }, [venueFilter, phaseFilter]);
+
   if (!tip)
     return (
       <div className={styles.noData}>
@@ -684,6 +719,20 @@ export default function PlayerStats() {
             setInputMarket={setInputMarket}
             handleSearch={handleSearch}
             tip={tip}
+          />
+
+          <PlayerHeader
+            playerName={tip.player || "Unknown Player"}
+            teamId={tip.team_id}
+            teamAbbr={tip.team_id}
+            position={tip.position}
+            opponent={tip.opponent}
+            opponentTeamId={tip.opponent_team_id}
+            selection={tip.selection}
+            line={tip.line}
+            market={tip.market}
+            averages={seasonAverages}
+            averagesTitle={averagesTitle}
           />
           <PlayerCharts
             chartData={chartData}
