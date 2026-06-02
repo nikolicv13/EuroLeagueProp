@@ -123,6 +123,27 @@ export default function PlayerCharts(props: PlayerChartsProps) {
 
   return (
     <>
+      <div className={styles.filterRow}>
+        <div className={styles.filterToggleGroup}>
+          {(["5", "10", "15", "season", "h2h"] as const).map((f) => {
+            if (f === "h2h" && selectedOppPlayer) return null;
+            return (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={
+                  activeFilter === f
+                    ? styles.filterButtonActive
+                    : styles.filterButton
+                }
+              >
+                {f === "h2h" ? "H2H" : f === "season" ? "Season" : `Last ${f}`}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className={styles.hitRatesContainer}>
         <HitRateBox
           label="L5"
@@ -172,23 +193,6 @@ export default function PlayerCharts(props: PlayerChartsProps) {
             )}
           />
         )}
-      </div>
-
-      <div className={styles.filterRow}>
-        <div className={styles.filterButtons}>
-          {(["5", "10", "15", "season", "h2h"] as const).map((f) => {
-            if (f === "h2h" && selectedOppPlayer) return null;
-            return (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`${styles.filterButton} ${activeFilter === f ? styles.filterButtonActive : ""}`}
-              >
-                {f === "h2h" ? "H2H" : f === "season" ? "Season" : `Last ${f}`}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       <div className={styles.chartContainer}>

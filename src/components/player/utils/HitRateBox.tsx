@@ -16,11 +16,13 @@ export default function HitRateBox({ label, hr }: HitRateBoxProps) {
         : styles.hitRatePercentLow;
 
   return (
-    <div className={styles.hitRateBox}>
+    <div className={styles.hitRateWrapper}>
       <div className={styles.hitRateLabel}>{label}</div>
-      <div className={`${styles.hitRatePercent} ${percentClass}`}>{pct}%</div>
-      <div className={styles.hitRateFraction}>
-        {hr.hits}/{hr.attempts}
+      <div className={styles.hitRateBox}>
+        <div className={`${styles.hitRatePercent} ${percentClass}`}>{pct}%</div>
+        <div className={styles.hitRateFraction}>
+          {hr.hits}/{hr.attempts}
+        </div>
       </div>
     </div>
   );

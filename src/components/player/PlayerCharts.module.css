@@ -1,9 +1,9 @@
 /* Hit Rates */
 .hitRatesContainer {
   display: flex;
-  gap: 10px;
+  gap: 24px;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .hitRateBox {
@@ -39,7 +39,16 @@
 
 /* Filters */
 .filterRow {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filterToggleGroup {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
 }
 .filterButtons {
   display: flex;
@@ -48,18 +57,41 @@
 }
 
 .filterButton {
-  padding: 0.5rem 1rem;
-  background: #e0e0e0;
-  color: black;
+  flex: 1;
+  padding: 10px 0;
+  background: white;
   border: none;
-  border-radius: 6px;
+  border-right: 1px solid #ccc;
   cursor: pointer;
-  font-weight: bold;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #666;
+  text-align: center;
+  transition: all 0.2s;
 }
 
 .filterButtonActive {
-  background: #0f3460;
+  flex: 1;
+  padding: 10px 0;
+  background: #333;
+  border: none;
+  border-right: 1px solid #333;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: white;
+  text-align: center;
+  transition: all 0.2s;
+}
+.filterButtonActive:last-child {
+  border-right: none;
+}
+.filterButton:last-child {
+  border-right: none;
+}
+
+.filterButton:hover:not(.filterButtonActive) {
+  background: #f9f9f9;
 }
 
 /* Main Chart */

@@ -1,24 +1,35 @@
 .hitRateBox {
   text-align: center;
-  background: #f0f0f0;
-  padding: 10px 15px;
+  background: #e0e0e0;
+  padding: 8px 12px;
   border-radius: 8px;
-  min-width: 70px;
+  width: 40%;
+  border: 1px solid #e0e0e0;
+}
+
+.hitRateWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 6px;
 }
 
 .hitRateLabel {
-  font-size: 0.75rem;
-  color: #666;
+  font-size: 0.6875rem; /* 11px */
+  color: #888;
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .hitRatePercent {
-  font-size: 1.125rem;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .hitRatePercentHigh {
-  color: green;
+  color: #4caf50;
 }
 .hitRatePercentMid {
   color: #333;
@@ -28,6 +39,7 @@
 }
 
 .hitRateFraction {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #888;
+  margin-top: 2px;
 }

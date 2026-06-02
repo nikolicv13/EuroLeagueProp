@@ -9,8 +9,12 @@ import {
 import DashboardSidebar from "./DashboardSidebar";
 import TipsList from "./TipsList";
 import styles from "./TipsDashboard.module.css";
+import { useSearchParams } from "react-router-dom";
 
 export default function TipsDashboard() {
+  const [searchParams] = useSearchParams();
+  const initialLeague = searchParams.get("leagueId") || "631799";
+  const [oddsLeagueId, setOddsLeagueId] = useState(initialLeague);
   // --- STATE ---
   const [viewMode, setViewMode] = useState<"odds" | "db">("odds");
   const [games, setGames] = useState<Game[]>([]);
@@ -18,7 +22,6 @@ export default function TipsDashboard() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [oddsLeagueId, setOddsLeagueId] = useState("631799");
   const [jsonGames, setJsonGames] = useState<JsonGame[]>([]);
   const [jsonTeams, setJsonTeams] = useState<string[]>([]);
   const [selectedJsonGameId, setSelectedJsonGameId] = useState<string>("all");

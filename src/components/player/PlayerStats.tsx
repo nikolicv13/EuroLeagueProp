@@ -98,6 +98,9 @@ export default function PlayerStats() {
   const [inputMarket, setInputMarket] = useState(tip.market);
   const [inputLine, setInputLine] = useState(tip.line);
   const [inputOverUnder, setInputOverUnder] = useState(tip.selection);
+  const [inputLeague, setInputLeague] = useState(
+    searchParams.get("leagueId") || "631799",
+  );
 
   const [searchQuery, setSearchQuery] = useState(tip.player || "");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
@@ -256,8 +259,7 @@ export default function PlayerStats() {
       );
       if (searchedPlayer) newPlayerName = searchedPlayer.player_name;
       try {
-        const leagueId = searchParams.get("leagueId") || "631799";
-        const allOdds = await fetchBrazilBetOdds(leagueId);
+        const allOdds = await fetchBrazilBetOdds(inputLeague);
         const liveTip = allOdds.find(
           (t: Tip) => t.player_id === selectedPlayerId,
         );
@@ -289,6 +291,7 @@ export default function PlayerStats() {
     }
 
     const newParams = new URLSearchParams();
+    newParams.set("leagueId", inputLeague);
     newParams.set("propType", inputMarket);
     newParams.set(
       "propAmount",
@@ -712,6 +715,8 @@ export default function PlayerStats() {
             setShowDropdown={setShowDropdown}
             handleSelectPlayer={handleSelectPlayer}
             inputOverUnder={inputOverUnder}
+            inputLeague={inputLeague}
+            setInputLeague={setInputLeague}
             setInputOverUnder={setInputOverUnder}
             inputLine={inputLine}
             setInputLine={setInputLine}
