@@ -1,6 +1,76 @@
+.dashboardWrapper {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f4f6f8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+.sortBarContainer {
+  width: 100%;
+  max-width: 1440px;
+}
+
+.sortToggleGroup {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px; /* Nice rounded corners */
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.sortButton {
+  flex: 1;
+  padding: 10px 0;
+  background: white;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-align: center;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sortButton:last-child {
+  border-right: none;
+}
+
+.sortButton:hover:not(.sortButtonActive) {
+  background: #f9f9f9;
+  color: #333;
+}
+
+.sortButtonActive {
+  flex: 1;
+  padding: 10px 0;
+  background: #16213e;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.sortButtonActive:last-child {
+  border-right: none;
+}
+
+/* The row containing Sidebar + TipsList */
 .dashboardContainer {
   display: flex;
-  height: 100vh;
-  font-family: sans-serif;
-  overflow: hidden;
+  width: 100%;
+  max-width: 1440px;
+  gap: 48px;
+  align-items: flex-start;
 }

@@ -1,67 +1,174 @@
 .sidebar {
-  width: 16rem;
-  min-width: 16rem;
+  width: 20rem; /* Slightly wider to fit odds */
+  min-width: 20rem;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 15px;
+  padding: 16px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   position: sticky;
   top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.sidebarTitle {
-  margin-top: 0;
-  font-size: 0.875rem;
+/* Top Filters */
+.filterRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.selectInput {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  background: white;
+  cursor: pointer;
+}
+
+/* Game Preview Card */
+.gamePreview {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.teamBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.teamLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.teamAbbr {
+  font-size: 11px;
+  font-weight: 800;
+  color: #333;
+  text-transform: uppercase;
+}
+
+.dateBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.dateDay {
+  font-size: 13px;
+  font-weight: 800;
+  color: #16213e;
+}
+
+.dateTime {
+  font-size: 11px;
   color: #666;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  font-weight: 500;
 }
 
-.sidebarItem {
+/* Props List */
+.propsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.propItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 10px;
   border-radius: 8px;
   cursor: pointer;
-  margin-bottom: 5px;
-  border: 1px solid transparent;
   transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
-.sidebarItem:hover {
+.propItem:hover {
   background: #f0f0f0;
-  border-color: #ddd;
 }
 
-.sidebarItemActive {
+.propItemActive {
   background: #e8f0fe;
   border-color: #0f3460;
 }
 
-.sidebarPlayerName {
-  font-size: 0.8125rem;
-  font-weight: bold;
+.playerImg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.playerInfo {
+  flex: 1;
+  min-width: 0; /* Allows text truncation */
+}
+
+.playerName {
+  font-size: 13px;
+  font-weight: 700;
   color: #333;
-  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebarPropText {
-  font-size: 0.75rem;
+.propDetails {
+  font-size: 11px;
   color: #666;
+  margin-top: 2px;
+  font-weight: 500;
 }
 
-.sidebarPositionText {
-  font-size: 0.6875rem;
-  color: #888;
-  font-weight: normal;
+/* Odds Boxes */
+.oddsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.sidebarOuOver {
-  color: #4caf50;
-  font-weight: bold;
+.oddBox {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  min-width: 42px;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.sidebarOuUnder {
-  color: #e94560;
-  font-weight: bold;
+.oddBox:hover {
+  opacity: 0.8;
+}
+
+.oddBoxOver {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.oddBoxUnder {
+  background: #ffebee;
+  color: #c62828;
 }

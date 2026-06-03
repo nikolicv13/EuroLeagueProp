@@ -1,33 +1,25 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import type { Game, Tip, PlayerSearchResult, JsonGame } from "../../api/types";
-import {
-  fetchGames,
-  fetchTips,
-  fetchBrazilBetOdds,
-  fetchPlayerSearch,
-} from "../../api/api";
+import { useState, useEffect, useMemo } from "react";
+import type { Tip, PlayerSearchResult, JsonGame } from "../../api/types";
+import { fetchBrazilBetOdds, fetchPlayerSearch } from "../../api/api";
 import DashboardSidebar from "./DashboardSidebar";
 import TipsList from "./TipsList";
+import type { SortType } from "./TipsList";
 import styles from "./TipsDashboard.module.css";
-import { useSearchParams } from "react-router-dom";
 
 export default function TipsDashboard() {
-  const [searchParams] = useSearchParams();
-  const initialLeague = searchParams.get("leagueId") || "631799";
-  const [oddsLeagueId, setOddsLeagueId] = useState(initialLeague);
   // --- STATE ---
-  const [viewMode, setViewMode] = useState<"odds" | "db">("odds");
-  const [games, setGames] = useState<Game[]>([]);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [oddsLeagueId, setOddsLeagueId] = useState("631799");
   const [jsonGames, setJsonGames] = useState<JsonGame[]>([]);
   const [jsonTeams, setJsonTeams] = useState<string[]>([]);
   const [selectedJsonGameId, setSelectedJsonGameId] = useState<string>("all");
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeSort, setActiveSort] = useState<SortType>("confidence");
+
   const [playerSearchQuery, setPlayerSearchQuery] = useState("");
   const [playerSearchResults, setPlayerSearchResults] = useState<
     PlayerSearchResult[]
@@ -40,8 +32,7 @@ export default function TipsDashboard() {
   const [maxOdds, setMaxOdds] = useState(10.0);
 
   const TIPS_PER_PAGE = 10;
-  const testDate = "2026-05-24";
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const testDate = "2026-05-24"; // Kept for TipCard display
 
   // --- HANDLERS ---
   const handlePlayerSearchChange = async (
@@ -49,28 +40,20 @@ export default function TipsDashboard() {
   ) => {
     const value = e.target.value;
     setPlayerSearchQuery(value);
-
-    // Clear existing timer
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-
     if (value.length >= 2) {
-      // Set new timer
-      debounceTimer.current = setTimeout(async () => {
-        try {
-          const results = await fetchPlayerSearch(value);
-          setPlayerSearchResults(results);
-          setShowPlayerDropdown(true);
-        } catch (err) {
-          console.error(err);
-        }
-      }, 300);
+      try {
+        const results = await fetchPlayerSearch(value);
+        setPlayerSearchResults(results);
+        setShowPlayerDropdown(true);
+      } catch (err) {
+        console.error(err);
+      }
     } else {
       setPlayerSearchResults([]);
       setShowPlayerDropdown(false);
     }
   };
+
   const handleSelectPlayer = (player: PlayerSearchResult) => {
     setSelectedPlayerFilter(player);
     setPlayerSearchQuery(player.player_name);
@@ -107,73 +90,49 @@ export default function TipsDashboard() {
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= Math.ceil(tips.length / TIPS_PER_PAGE)) {
-      // Using rough total for bounds check
       setCurrentPage(page);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   // --- EFFECTS ---
-
-  //Fetches the list of games for a specific date (testDate)
-  useEffect(() => {
-    async function loadGames() {
-      try {
-        const data = await fetchGames(testDate);
-        setGames(data);
-        if (data.length > 0 && !selectedGameId)
-          setSelectedGameId(data[0].game_id);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    loadGames();
-  }, [selectedGameId]);
-
-  // Fetches the actual tips/odds data based on the current view mode.
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setTips([]);
       setCurrentPage(1);
       try {
-        if (viewMode === "odds" && oddsLeagueId) {
-          const data = await fetchBrazilBetOdds(oddsLeagueId);
-          setTips(data);
-          const uniqueGamesMap = new Map<string, JsonGame>();
-          const uniqueTeamsSet = new Set<string>();
-          data.forEach((tip: Tip) => {
-            const tAbbr = tip.team_abbr || tip.team_id || tip.team || "UNK";
-            const oAbbr =
-              tip.opponent_abbr ||
-              tip.opponent_team_id ||
-              tip.opponent ||
-              "UNK";
-            if (!uniqueGamesMap.has(tip.game_id))
-              uniqueGamesMap.set(tip.game_id, {
-                game_id: tip.game_id,
-                team: tAbbr,
-                opponent: oAbbr,
-              });
-            uniqueTeamsSet.add(tAbbr);
-            uniqueTeamsSet.add(oAbbr);
-          });
-          setJsonGames(Array.from(uniqueGamesMap.values()));
-          setJsonTeams(Array.from(uniqueTeamsSet).sort());
-          setSelectedJsonGameId("all");
-          setSelectedTeamFilter("all");
-        } else if (viewMode === "db" && selectedGameId) {
-          const data = await fetchTips(selectedGameId);
-          setTips(data);
-        }
+        const data = await fetchBrazilBetOdds(oddsLeagueId);
+        setTips(data);
+
+        const uniqueGamesMap = new Map<string, JsonGame>();
+        const uniqueTeamsSet = new Set<string>();
+
+        data.forEach((tip: Tip) => {
+          const tAbbr = tip.team_abbr || tip.team_id || tip.team || "UNK";
+          const oAbbr =
+            tip.opponent_abbr || tip.opponent_team_id || tip.opponent || "UNK";
+          if (!uniqueGamesMap.has(tip.game_id))
+            uniqueGamesMap.set(tip.game_id, {
+              game_id: tip.game_id,
+              team: tAbbr,
+              opponent: oAbbr,
+            });
+          uniqueTeamsSet.add(tAbbr);
+        });
+
+        setJsonGames(Array.from(uniqueGamesMap.values()));
+        setJsonTeams(Array.from(uniqueTeamsSet).sort());
+        setSelectedJsonGameId("all");
+        setSelectedTeamFilter("all");
       } catch (err) {
-        console.error("Failed to load tips:", err);
+        console.error("Failed to load odds:", err);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, [viewMode, selectedGameId, oddsLeagueId]);
+  }, [oddsLeagueId]);
 
   // --- MEMOIZED DATA ---
   const getMarketGroup = (market: string) => {
@@ -185,32 +144,68 @@ export default function TipsDashboard() {
 
   const { paginatedTips, totalPages } = useMemo(() => {
     let filtered = tips;
-    if (viewMode === "odds") {
-      if (selectedJsonGameId !== "all")
-        filtered = filtered.filter((t) => t.game_id === selectedJsonGameId);
-      if (selectedTeamFilter !== "all")
-        filtered = filtered.filter(
-          (t) => (t.team_abbr || t.team_id) === selectedTeamFilter,
+
+    // 1. Filtering
+    if (selectedJsonGameId !== "all")
+      filtered = filtered.filter((t) => t.game_id === selectedJsonGameId);
+    if (selectedTeamFilter !== "all")
+      filtered = filtered.filter(
+        (t) => (t.team_abbr || t.team_id) === selectedTeamFilter,
+      );
+    if (selectedPlayerFilter)
+      filtered = filtered.filter(
+        (t) => t.player_id === selectedPlayerFilter.player_id,
+      );
+    if (selectedPropFilter !== "all")
+      filtered = filtered.filter(
+        (t) => getMarketGroup(t.market) === selectedPropFilter,
+      );
+    filtered = filtered.filter((t) => t.odds >= minOdds && t.odds <= maxOdds);
+
+    // 2. Sorting
+    const sorted = [...filtered];
+    switch (activeSort) {
+      case "confidence":
+        sorted.sort((a, b) => (b.score || 0) - (a.score || 0));
+        break;
+      case "last5":
+        sorted.sort(
+          (a, b) =>
+            (b.hit_rates?.last5?.rate || 0) - (a.hit_rates?.last5?.rate || 0),
         );
-      if (selectedPlayerFilter)
-        filtered = filtered.filter(
-          (t) => t.player_id === selectedPlayerFilter.player_id,
+        break;
+      case "last10":
+        sorted.sort(
+          (a, b) =>
+            (b.hit_rates?.last10?.rate || 0) - (a.hit_rates?.last10?.rate || 0),
         );
-      if (selectedPropFilter !== "all")
-        filtered = filtered.filter(
-          (t) => getMarketGroup(t.market) === selectedPropFilter,
+        break;
+      case "last15":
+        sorted.sort(
+          (a, b) =>
+            (b.hit_rates?.last15?.rate || 0) - (a.hit_rates?.last15?.rate || 0),
         );
-      filtered = filtered.filter((t) => t.odds >= minOdds && t.odds <= maxOdds);
+        break;
+      case "vsOpp":
+        sorted.sort(
+          (a, b) =>
+            (b.hit_rates?.vs_opp?.rate || 0) - (a.hit_rates?.vs_opp?.rate || 0),
+        );
+        break;
+      case "trending":
+        sorted.sort((a, b) => (b.score || 0) - (a.score || 0));
+        break;
     }
-    const total = Math.ceil(filtered.length / TIPS_PER_PAGE);
+
+    // 3. Pagination
+    const total = Math.ceil(sorted.length / TIPS_PER_PAGE);
     const startIndex = (currentPage - 1) * TIPS_PER_PAGE;
     return {
-      paginatedTips: filtered.slice(startIndex, startIndex + TIPS_PER_PAGE),
+      paginatedTips: sorted.slice(startIndex, startIndex + TIPS_PER_PAGE),
       totalPages: total,
     };
   }, [
     tips,
-    viewMode,
     selectedJsonGameId,
     selectedTeamFilter,
     currentPage,
@@ -218,61 +213,90 @@ export default function TipsDashboard() {
     selectedPropFilter,
     minOdds,
     maxOdds,
+    activeSort,
   ]);
 
   // --- RENDER ---
-  return (
-    <div className={styles.dashboardContainer}>
-      <DashboardSidebar
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        oddsLeagueId={oddsLeagueId}
-        setOddsLeagueId={setOddsLeagueId}
-        jsonGames={jsonGames}
-        selectedJsonGameId={selectedJsonGameId}
-        setSelectedJsonGameId={(id) => {
-          setSelectedJsonGameId(id);
-          setCurrentPage(1);
-        }}
-        jsonTeams={jsonTeams}
-        selectedTeamFilter={selectedTeamFilter}
-        setSelectedTeamFilter={(team) => {
-          setSelectedTeamFilter(team);
-          setCurrentPage(1);
-        }}
-        games={games}
-        selectedGameId={selectedGameId}
-        setSelectedGameId={setSelectedGameId}
-        playerSearchQuery={playerSearchQuery}
-        handlePlayerSearchChange={handlePlayerSearchChange}
-        playerSearchResults={playerSearchResults}
-        showPlayerDropdown={showPlayerDropdown}
-        setShowPlayerDropdown={setShowPlayerDropdown}
-        selectedPlayerFilter={selectedPlayerFilter}
-        handleSelectPlayer={handleSelectPlayer}
-        clearPlayerFilter={clearPlayerFilter}
-        selectedPropFilter={selectedPropFilter}
-        setSelectedPropFilter={(prop) => {
-          setSelectedPropFilter(prop);
-          setCurrentPage(1);
-        }}
-        minOdds={minOdds}
-        maxOdds={maxOdds}
-        handleMinOddsChange={handleMinOddsChange}
-        handleMaxOddsChange={handleMaxOddsChange}
-        resetDashboardFilters={resetDashboardFilters}
-        tipsCount={tips.length}
-        testDate={testDate}
-      />
+  const sortOptions: { value: SortType; label: string }[] = [
+    { value: "trending", label: " Trending" },
+    { value: "confidence", label: " Confidence" },
+    { value: "last5", label: "Last 5" },
+    { value: "last10", label: "Last 10" },
+    { value: "last15", label: "Last 15" },
+    { value: "vsOpp", label: "vs Opponent" },
+  ];
 
-      <TipsList
-        loading={loading}
-        paginatedTips={paginatedTips}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        goToPage={goToPage}
-        testDate={testDate}
-      />
+  return (
+    <div className={styles.dashboardWrapper}>
+      {/* GLOBAL SORT BAR */}
+      <div className={styles.sortBarContainer}>
+        <div className={styles.sortToggleGroup}>
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                setActiveSort(opt.value);
+                setCurrentPage(1);
+              }}
+              className={
+                activeSort === opt.value
+                  ? styles.sortButtonActive
+                  : styles.sortButton
+              }
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className={styles.dashboardContainer}>
+        <DashboardSidebar
+          oddsLeagueId={oddsLeagueId}
+          setOddsLeagueId={setOddsLeagueId}
+          jsonGames={jsonGames}
+          selectedJsonGameId={selectedJsonGameId}
+          setSelectedJsonGameId={(id) => {
+            setSelectedJsonGameId(id);
+            setCurrentPage(1);
+          }}
+          jsonTeams={jsonTeams}
+          selectedTeamFilter={selectedTeamFilter}
+          setSelectedTeamFilter={(team) => {
+            setSelectedTeamFilter(team);
+            setCurrentPage(1);
+          }}
+          playerSearchQuery={playerSearchQuery}
+          handlePlayerSearchChange={handlePlayerSearchChange}
+          playerSearchResults={playerSearchResults}
+          showPlayerDropdown={showPlayerDropdown}
+          setShowPlayerDropdown={setShowPlayerDropdown}
+          selectedPlayerFilter={selectedPlayerFilter}
+          handleSelectPlayer={handleSelectPlayer}
+          clearPlayerFilter={clearPlayerFilter}
+          selectedPropFilter={selectedPropFilter}
+          setSelectedPropFilter={(prop) => {
+            setSelectedPropFilter(prop);
+            setCurrentPage(1);
+          }}
+          minOdds={minOdds}
+          maxOdds={maxOdds}
+          handleMinOddsChange={handleMinOddsChange}
+          handleMaxOddsChange={handleMaxOddsChange}
+          resetDashboardFilters={resetDashboardFilters}
+          tipsCount={tips.length}
+        />
+
+        <TipsList
+          loading={loading}
+          paginatedTips={paginatedTips}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          goToPage={goToPage}
+          testDate={testDate}
+        />
+      </div>
     </div>
   );
 }

@@ -6,11 +6,9 @@ export default function Header() {
     <header className={styles.siteHeader}>
       <div className={styles.siteHeaderInner}>
         {/* Left Section: Logo */}
-        <div className={`${styles.headerSection} ${styles.headerLeft}`}>
-          <NavLink to="/" className={styles.logo}>
-            EuroTips
-          </NavLink>
-        </div>
+        <NavLink to="/" className={styles.logo}>
+          PropAlley <span className={styles.betaBadge}>BETA</span>
+        </NavLink>
 
         {/* Middle Section: Navigation */}
         <div className={`${styles.headerSection} ${styles.headerCenter}`}>

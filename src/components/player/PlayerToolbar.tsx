@@ -29,13 +29,12 @@ interface PlayerToolbarProps {
 }
 
 export default function PlayerToolbar(props: PlayerToolbarProps) {
-  // Determine layout based on prop
+  const [searchParams] = useSearchParams();
+
   const showLeague = props.showLeagueFilter ?? false;
   const gridClass = showLeague
     ? styles.toolbarGridWithLeague
     : styles.toolbarGridWithoutLeague;
-
-  const [searchParams] = useSearchParams();
 
   const currentLeagueId =
     props.inputLeague || searchParams.get("leagueId") || "631799";
@@ -45,19 +44,24 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
     if (id === "nba") return "NBA";
     return "League";
   };
+
   return (
     <>
-      <Breadcrumb
-        leagueId={currentLeagueId}
-        leagueName={getLeagueName(currentLeagueId)}
-        playerName={props.tip?.player || props.searchQuery || "Unknown Player"}
-      />
+      {!showLeague && (
+        <Breadcrumb
+          leagueId={currentLeagueId}
+          leagueName={getLeagueName(currentLeagueId)}
+          playerName={
+            props.tip?.player || props.searchQuery || "Unknown Player"
+          }
+        />
+      )}
 
       <div className={styles.toolbar}>
         <div className={gridClass}>
           {/* ROW 1, COL 1: Player Name */}
           <div
-            className={`${styles.formGroup} ${styles.searchGroup} ${showLeague ? styles.wlPlayer : styles.nolPlayer}`}
+            className={`${styles.formGroup} ${styles.searchGroup} ${showLeague ? styles.withLeague_Player : styles.withoutLeague_Player}`}
           >
             <label className={styles.formLabel}>Player Name</label>
             <input
@@ -91,9 +95,9 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
             )}
           </div>
 
-          {/* ROW 1, COL 2: League (ONLY IF showLeague is true) */}
+          {/* ROW 1, COL 2: League (ONLY ON SEARCH PAGE) */}
           {showLeague && props.inputLeague && props.setInputLeague && (
-            <div className={`${styles.formGroup} ${styles.wlLeague}`}>
+            <div className={`${styles.formGroup} ${styles.withLeague_League}`}>
               <label className={styles.formLabel}>League</label>
               <select
                 value={props.inputLeague}
@@ -107,9 +111,9 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
             </div>
           )}
 
-          {/* ROW 1, COL 3 (or 2): Over/Under */}
+          {/* ROW 1, COL 3: Over/Under */}
           <div
-            className={`${styles.formGroup} ${showLeague ? styles.wlOverUnder : styles.nolOverUnder}`}
+            className={`${styles.formGroup} ${showLeague ? styles.withLeague_OverUnder : styles.withoutLeague_OverUnder}`}
           >
             <label className={styles.formLabel}>Over/Under</label>
             <select
@@ -124,36 +128,9 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
             </select>
           </div>
 
-          {/* ROW 2, COL 1-2 (or 1): Prop Type */}
+          {/* ROW 2, COL 1: LINE (30% Left on Stats Page) */}
           <div
-            className={`${styles.formGroup} ${showLeague ? styles.wlPropType : styles.nolPropType}`}
-          >
-            <label className={styles.formLabel}>Prop Type</label>
-            <select
-              value={props.inputMarket}
-              onChange={(e) => props.setInputMarket(e.target.value)}
-              className={styles.formSelect}
-            >
-              <option value="points">Points</option>
-              <option value="rebounds">Rebounds</option>
-              <option value="assists">Assists</option>
-              <option value="threes_made">3PT Made</option>
-              <optgroup label="Combinations">
-                <option value="pra">P + R + A</option>
-                <option value="pa">P + A</option>
-                <option value="pr">P + R</option>
-                <option value="ra">R + A</option>
-              </optgroup>
-              <optgroup label="Defense">
-                <option value="steals">Steals</option>
-                <option value="blocks">Blocks</option>
-              </optgroup>
-            </select>
-          </div>
-
-          {/* ROW 2, COL 3 (or 2): Line */}
-          <div
-            className={`${styles.formGroup} ${showLeague ? styles.wlLine : styles.nolLine}`}
+            className={`${styles.formGroup} ${showLeague ? styles.withLeague_Line : styles.withoutLeague_Line}`}
           >
             <label className={styles.formLabel}>Line</label>
             <input
@@ -165,10 +142,35 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
             />
           </div>
 
-          {/* ROW 3: Search Button (Spans all columns automatically) */}
+          {/* ROW 2, COL 2: PROP TYPE (70% Right on Stats Page) */}
+          <div
+            className={`${styles.formGroup} ${showLeague ? styles.withLeague_PropType : styles.withoutLeague_PropType}`}
+          >
+            <label className={styles.formLabel}>Prop Type</label>
+            <select
+              value={props.inputMarket}
+              onChange={(e) => props.setInputMarket(e.target.value)}
+              className={styles.formSelect}
+            >
+              <option value="points">Points</option>
+              <option value="rebounds">Rebounds</option>
+              <option value="assists">Assists</option>
+              <option value="threes_made">3PT Made</option>
+
+              <option value="pra">P + R + A</option>
+              <option value="pa">P + A</option>
+              <option value="pr">P + R</option>
+              <option value="ra">R + A</option>
+
+              <option value="steals">Steals</option>
+              <option value="blocks">Blocks</option>
+            </select>
+          </div>
+
+          {/* ROW 3: Search Button */}
           <div className={`${styles.formGroup} ${styles.gridSearchBtn}`}>
             <button onClick={props.handleSearch} className={styles.searchBtn}>
-              🔍 Search Matchup
+              Search
             </button>
           </div>
         </div>

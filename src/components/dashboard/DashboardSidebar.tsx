@@ -1,11 +1,9 @@
 import React from "react";
-import type { Game, PlayerSearchResult, JsonGame } from "../../api/types";
+import type { PlayerSearchResult, JsonGame } from "../../api/types";
 import OddsSlider from "./OddsSlider";
 import styles from "./DashboardSidebar.module.css";
 
 interface DashboardSidebarProps {
-  viewMode: "odds" | "db";
-  setViewMode: (mode: "odds" | "db") => void;
   oddsLeagueId: string;
   setOddsLeagueId: (id: string) => void;
   jsonGames: JsonGame[];
@@ -14,9 +12,6 @@ interface DashboardSidebarProps {
   jsonTeams: string[];
   selectedTeamFilter: string;
   setSelectedTeamFilter: (team: string) => void;
-  games: Game[];
-  selectedGameId: string | null;
-  setSelectedGameId: (id: string) => void;
   playerSearchQuery: string;
   handlePlayerSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   playerSearchResults: PlayerSearchResult[];
@@ -33,7 +28,6 @@ interface DashboardSidebarProps {
   handleMaxOddsChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetDashboardFilters: () => void;
   tipsCount: number;
-  testDate: string;
 }
 
 export default function DashboardSidebar(props: DashboardSidebarProps) {
@@ -46,127 +40,87 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
 
   return (
     <div className={styles.sidebar}>
-      <h2 className={styles.sidebarTitle}>Data Source</h2>
+      <h2 className={styles.sidebarTitle}>Filters</h2>
 
-      {/* MODE TOGGLE */}
-      <div className={styles.modeToggleContainer}>
-        <button
-          onClick={() => props.setViewMode("odds")}
-          className={`${styles.modeButton} ${props.viewMode === "odds" ? styles.modeButtonActiveOdds : ""}`}
-        >
-          🎯 Live Odds
-        </button>
-        <button
-          onClick={() => props.setViewMode("db")}
-          className={`${styles.modeButton} ${props.viewMode === "db" ? styles.modeButtonActiveDb : ""}`}
-        >
-          🗄️ DB Tips
-        </button>
-      </div>
-
-      {/* CONDITIONAL SIDEBAR CONTENT */}
-      {props.viewMode === "odds" ? (
-        <div className={styles.sidebarSection}>
-          <div>
-            <label className={styles.filterLabel}>Select League</label>
-            <div className={styles.leagueSelectWrapper}>
-              <img
-                src={`/logos/${getLeagueLogo(props.oddsLeagueId)}.png`}
-                alt="League Logo"
-                className={styles.leagueSelectIcon}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    "/logos/placeholder.png";
-                }}
-              />
-              <select
-                className={`${styles.filterSelect} ${styles.leagueSelect}`}
-                value={props.oddsLeagueId}
-                onChange={(e) => props.setOddsLeagueId(e.target.value)}
-              >
-                <option value="631799">Euroleague</option>
-                <option value="eurocup" disabled>
-                  Eurocup (Coming Soon)
-                </option>
-                <option value="nba" disabled>
-                  NBA (Coming Soon)
-                </option>
-              </select>
-            </div>
+      <div className={styles.sidebarSection}>
+        {/* LEAGUE SELECT */}
+        <div>
+          <label className={styles.filterLabel}>Select League</label>
+          <div className={styles.leagueSelectWrapper}>
+            <img
+              src={`/logos/${getLeagueLogo(props.oddsLeagueId)}.png`}
+              alt="League Logo"
+              className={styles.leagueSelectIcon}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "/logos/placeholder.png";
+              }}
+            />
+            <select
+              className={`${styles.filterSelect} ${styles.leagueSelect}`}
+              value={props.oddsLeagueId}
+              onChange={(e) => props.setOddsLeagueId(e.target.value)}
+            >
+              <option value="631799">Euroleague</option>
+              <option value="eurocup" disabled>
+                Eurocup (Coming Soon)
+              </option>
+              <option value="nba" disabled>
+                NBA (Coming Soon)
+              </option>
+            </select>
           </div>
-
-          {props.jsonGames.length > 0 && (
-            <div>
-              <label className={styles.filterLabel}>Filter by Game</label>
-              <select
-                className={styles.filterSelect}
-                value={props.selectedJsonGameId}
-                onChange={(e) => {
-                  props.setSelectedJsonGameId(e.target.value);
-                }}
-              >
-                <option value="all">All Games ({props.tipsCount} props)</option>
-                {props.jsonGames.map((g) => (
-                  <option key={g.game_id} value={g.game_id}>
-                    {g.team} vs {g.opponent}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {props.jsonTeams.length > 0 && (
-            <div>
-              <label className={styles.filterLabel}>Filter by Team</label>
-              <select
-                className={styles.filterSelect}
-                value={props.selectedTeamFilter}
-                onChange={(e) => {
-                  props.setSelectedTeamFilter(e.target.value);
-                }}
-              >
-                <option value="all">All Teams</option>
-                {props.jsonTeams.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
-      ) : (
-        <div className={styles.sidebarSection}>
-          <label className={styles.filterLabel}>
-            Select Game ({props.testDate})
-          </label>
-          {props.games.length === 0 ? (
-            <p className={styles.statusError}>⚠️ No games found in DB.</p>
-          ) : (
+
+        {/* GAME FILTER */}
+        {props.jsonGames.length > 0 && (
+          <div>
+            <label className={styles.filterLabel}>Filter by Game</label>
             <select
               className={styles.filterSelect}
-              value={props.selectedGameId || ""}
-              onChange={(e) => props.setSelectedGameId(e.target.value)}
+              value={props.selectedJsonGameId}
+              onChange={(e) => {
+                props.setSelectedJsonGameId(e.target.value);
+              }}
             >
-              {props.games.map((game) => (
-                <option key={game.game_id} value={game.game_id}>
-                  {game.team_a} vs {game.team_b}
+              <option value="all">All Games ({props.tipsCount} props)</option>
+              {props.jsonGames.map((g) => (
+                <option key={g.game_id} value={g.game_id}>
+                  {g.team} vs {g.opponent}
                 </option>
               ))}
             </select>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* TEAM FILTER */}
+        {props.jsonTeams.length > 0 && (
+          <div>
+            <label className={styles.filterLabel}>Filter by Team</label>
+            <select
+              className={styles.filterSelect}
+              value={props.selectedTeamFilter}
+              onChange={(e) => {
+                props.setSelectedTeamFilter(e.target.value);
+              }}
+            >
+              <option value="all">All Teams</option>
+              {props.jsonTeams.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* PLAYER SEARCH */}
       <div className={styles.playerSearchWrapper}>
         <label className={styles.filterLabel}>Filter by Player</label>
-
-        {/* 👇 NEW WRAPPER for the input and the inner X button */}
         <div className={styles.inputWithClear}>
           <input
             type="text"
-            // Add active class when a player is selected to make room for the X
             className={`${styles.filterInput} ${props.selectedPlayerFilter ? styles.filterInputActive : ""}`}
             placeholder="Search player..."
             value={props.playerSearchQuery}
@@ -247,7 +201,7 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
         onClick={props.resetDashboardFilters}
         className={styles.resetFiltersBtn}
       >
-        Reset
+        Reset Filters
       </button>
     </div>
   );

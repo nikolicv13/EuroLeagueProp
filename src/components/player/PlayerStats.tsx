@@ -23,7 +23,7 @@ import type {
   ChartDataPoint,
 } from "../../api/types";
 import { parseMinutes, formatDate } from "./utils/playerHelpers";
-import GamePropsSidebar from "./GamePropsSidebar";
+
 import PlayerToolbar from "./PlayerToolbar";
 import PlayerCharts from "./PlayerCharts";
 import DefenseSection from "./DefenseSection";
@@ -32,6 +32,7 @@ import GameLogTable from "./GameLogTable";
 import PlayerSidebar from "./PlayerSidebar";
 import PlayerHeader, { type SeasonAverages } from "./PlayerHeader";
 import styles from "./PlayerStats.module.css";
+import GamePropsSidebar, { type GroupedProp } from "./GamePropsSidebar";
 
 export default function PlayerStats() {
   const location = useLocation();
@@ -53,7 +54,9 @@ export default function PlayerStats() {
 
   const tip: CurrentTip = {
     player_id: playerId || savedState?.player_id || "",
-    player: savedState?.player,
+    player: getParam("playerName", "")
+      ? decodeURIComponent(getParam("playerName", ""))
+      : savedState?.player || "",
     market: normalizedMarket,
     line: parseFloat(
       getParam("propAmount", String(savedState?.line || "10.5")),
@@ -101,13 +104,17 @@ export default function PlayerStats() {
   const [inputLeague, setInputLeague] = useState(
     searchParams.get("leagueId") || "631799",
   );
+  const [allLeagueOdds, setAllLeagueOdds] = useState<Tip[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string>(
+    tip.game_id || "",
+  );
+  const [sidebarPropFilter, setSidebarPropFilter] = useState<string>("all");
 
   const [searchQuery, setSearchQuery] = useState(tip.player || "");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
-  const [gameTips, setGameTips] = useState<Tip[]>([]);
   const [pendingTipData, setPendingTipData] = useState<Tip | null>(null);
 
   const [oppPlayerQuery, setOppPlayerQuery] = useState(
@@ -246,12 +253,12 @@ export default function PlayerStats() {
   const handleSearch = async () => {
     const targetPlayerId = selectedPlayerId || playerId;
     const newAmount = inputLine !== undefined ? inputLine : tip.line;
+    let newPlayerName = searchQuery || tip.player || "Unknown Player";
     let oppTeam = tip.opponent_team_id;
     let oppName = tip.opponent;
     let teamId = tip.team_id;
     let position = tip.position;
     const season = tip.season;
-    let newPlayerName = tip.player;
 
     if (selectedPlayerId && selectedPlayerId !== playerId) {
       const searchedPlayer = searchResults.find(
@@ -291,6 +298,7 @@ export default function PlayerStats() {
     }
 
     const newParams = new URLSearchParams();
+    newParams.set("playerName", encodeURIComponent(newPlayerName));
     newParams.set("leagueId", inputLeague);
     newParams.set("propType", inputMarket);
     newParams.set(
@@ -531,26 +539,21 @@ export default function PlayerStats() {
   }, [tip.opponent_team_id, tip.position, defenseLimit]);
 
   useEffect(() => {
-    if (!tip.game_id) return;
-    (async () => {
+    const leagueId = searchParams.get("leagueId") || "631799";
+    async function loadLiveOdds() {
       try {
-        const allOdds = await fetchBrazilBetOdds(
-          searchParams.get("leagueId") || "631799",
-        );
-        let filteredOdds = allOdds.filter(
-          (t: Tip) => t.game_id === tip.game_id,
-        );
-        if (filteredOdds.length === 0)
-          filteredOdds = allOdds.filter(
-            (t: Tip) =>
-              t.team_id === tip.team_id || t.opponent_team_id === tip.team_id,
-          );
-        setGameTips(filteredOdds);
+        const allOdds = await fetchBrazilBetOdds(leagueId);
+        setAllLeagueOdds(allOdds);
+        // Default to first game if none selected
+        if (!selectedGameId && allOdds.length > 0) {
+          setSelectedGameId(allOdds[0].game_id);
+        }
       } catch (err) {
-        console.error("Failed to load live odds for sidebar:", err);
+        console.error("Failed to load live odds:", err);
       }
-    })();
-  }, [tip.game_id, tip.team_id, tip.opponent_team_id, searchParams]);
+    }
+    loadLiveOdds();
+  }, [searchParams, selectedGameId]);
 
   useEffect(() => {
     if (
@@ -623,6 +626,50 @@ export default function PlayerStats() {
           ),
     [venueFilteredH2H, phaseFilter],
   );
+
+  // 1. Get unique games for the dropdown
+  const availableGames = useMemo(() => {
+    const map = new Map<string, Tip>();
+    allLeagueOdds.forEach((t) => {
+      if (!map.has(t.game_id)) map.set(t.game_id, t);
+    });
+    return Array.from(map.values());
+  }, [allLeagueOdds]);
+
+  // 2. Group Over/Under odds together
+  const groupedSidebarTips = useMemo(() => {
+    const filtered = allLeagueOdds.filter((t) => {
+      const normalizedMarket = t.market.replace(/_alt\d*/g, "");
+
+      return (
+        t.game_id === selectedGameId &&
+        (sidebarPropFilter === "all" || normalizedMarket === sidebarPropFilter)
+      );
+    });
+
+    const groups: Record<string, GroupedProp> = {};
+
+    filtered.forEach((tip) => {
+      const key = `${tip.player_id}-${tip.market}-${tip.line}`;
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          player: tip.player,
+          player_id: tip.player_id,
+          market: tip.market,
+          line: tip.line,
+        };
+      }
+      if (tip.selection === "over") {
+        groups[key].overOdds = tip.odds;
+        groups[key].overTip = tip;
+      } else {
+        groups[key].underOdds = tip.odds;
+        groups[key].underTip = tip;
+      }
+    });
+    return Object.values(groups);
+  }, [allLeagueOdds, selectedGameId, sidebarPropFilter]);
 
   const mapToChartData = (s: PlayerGameStat[]): ChartDataPoint[] =>
     s.map((game) => ({
@@ -701,7 +748,12 @@ export default function PlayerStats() {
   return (
     <div className={styles.pageLayout}>
       <GamePropsSidebar
-        gameTips={gameTips}
+        availableGames={availableGames}
+        selectedGameId={selectedGameId}
+        setSelectedGameId={setSelectedGameId}
+        propFilter={sidebarPropFilter}
+        setPropFilter={setSidebarPropFilter}
+        groupedTips={groupedSidebarTips}
         currentTip={tip}
         onTipClick={handleSidebarClick}
       />

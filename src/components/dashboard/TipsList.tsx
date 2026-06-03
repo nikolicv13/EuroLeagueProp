@@ -2,6 +2,14 @@ import type { Tip } from "../../api/types";
 import TipCard from "./shared/TipCard";
 import styles from "./TipsList.module.css";
 
+export type SortType =
+  | "trending"
+  | "confidence"
+  | "last5"
+  | "last10"
+  | "last15"
+  | "vsOpp";
+
 interface TipsListProps {
   loading: boolean;
   paginatedTips: Tip[];
@@ -23,20 +31,28 @@ export default function TipsList({
     <div className={styles.mainContent}>
       {loading && <p className={styles.loadingText}>Loading tips...</p>}
 
-      {!loading && paginatedTips.length === 0 && (
-        <p className={styles.emptyText}>No tips found for this selection.</p>
+      {!loading && (
+        <>
+          {paginatedTips.length === 0 ? (
+            <p className={styles.emptyText}>
+              No tips found for this selection.
+            </p>
+          ) : (
+            <div className={styles.tipsList}>
+              {paginatedTips.map((tip) => (
+                <TipCard
+                  key={tip.id}
+                  tip={tip}
+                  dateLabel={testDate}
+                  onGameReport={(t) =>
+                    console.log("Game report for:", t.player)
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
-
-      <div className={styles.tipsList}>
-        {paginatedTips.map((tip) => (
-          <TipCard
-            key={tip.id}
-            tip={tip}
-            dateLabel={testDate}
-            onGameReport={(t) => console.log("Game report for:", t.player)}
-          />
-        ))}
-      </div>
 
       {/* PAGINATION CONTROLS */}
       {!loading && totalPages > 1 && (

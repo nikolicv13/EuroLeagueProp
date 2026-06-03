@@ -1,143 +1,125 @@
 .sidebar {
-  width: 280px;
-  padding: 20px;
-  padding-right: 10px;
+  width: 400px;
+  min-width: 400px;
+  padding: 24px;
   flex-shrink: 0;
-  background-color: #f5f5f5;
-  border-right: 1px solid #e0e0e0;
-  overflow-y: auto;
-  max-height: calc(100vh - 20px);
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 12px;
+  position: sticky;
+  top: 24px;
 }
 
 .sidebarTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  margin: 15px 0 8px;
-}
-
-.sidebarTitle:first-child {
-  margin-top: 0;
+  font-size: 16px; /* Bigger */
+  font-weight: 700;
+  color: #16213e;
+  margin: 0 0 8px 0;
 }
 
 .sidebarSection {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px; /* More space between filters */
   border-top: 1px solid #eee;
-  padding-top: 15px;
-  margin-top: 5px;
+  padding-top: 20px;
 }
 
-/* Mode Toggle Buttons */
-.modeToggleContainer {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.modeButton {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #e0e0e0;
-  color: #333;
-  font-weight: bold;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.modeButton:hover {
-  background: #d5d5d5;
-}
-
-.modeButtonActiveOdds {
-  background: #4caf50;
-  color: white;
-}
-
-.modeButtonActiveOdds:hover {
-  background: #45a049;
-}
-
-.modeButtonActiveDb {
-  background: #2196f3;
-  color: white;
-}
-
-.modeButtonActiveDb:hover {
-  background: #1e88e5;
-}
-
-/* Form Controls */
+/* Typography */
 .filterLabel {
-  font-size: 12px;
-  font-weight: bold;
-  color: #666;
+  font-size: 13px; /* Bigger */
+  font-weight: 600;
+  color: #555;
   display: block;
   margin-bottom: 8px;
 }
 
+/* Inputs & Selects */
 .filterInput,
 .filterSelect {
   width: 100%;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
+  padding: 12px; /* Taller inputs */
+  border-radius: 8px; /* Softer radius */
+  border: 1px solid #e0e0e0;
+  font-size: 15px; /* Bigger text */
   box-sizing: border-box;
-  background: white;
+  background: #fafafa;
   color: #333;
+  transition: all 0.2s;
+}
+
+.filterInput:focus,
+.filterSelect:focus {
+  outline: none;
+  border-color: #0f3460;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.1);
 }
 
 .filterSelect option {
   background: white;
   color: #333;
 }
-
 .filterSelect option:disabled {
   color: #999;
   background-color: #f9f9f9;
   font-style: italic;
 }
 
-.sidebarSelect {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  margin-bottom: 15px;
-  background: white;
+/* Mode Toggle Buttons */
+.modeToggleContainer {
+  display: flex;
+  gap: 10px;
 }
-
-.sidebarSelect option {
-  background: #16213e;
+.modeButton {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f0f0f0;
+  color: #333;
+  font-weight: 700;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.modeButton:hover {
+  background: #e0e0e0;
+}
+.modeButtonActiveOdds {
+  background: #4caf50;
   color: white;
 }
-
-.sidebarNoGames {
-  color: #aaa;
-  font-size: 14px;
+.modeButtonActiveOdds:hover {
+  background: #45a049;
+}
+.modeButtonActiveDb {
+  background: #2196f3;
+  color: white;
+}
+.modeButtonActiveDb:hover {
+  background: #1e88e5;
 }
 
 /* Status Messages */
 .statusSuccess {
-  font-size: 11px;
+  font-size: 12px;
   color: #4caf50;
-  font-weight: bold;
+  font-weight: 700;
   margin: 0;
 }
-
 .statusError {
-  font-size: 12px;
+  font-size: 13px;
   color: #d32f2f;
   background: #ffebee;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 12px;
+  border-radius: 8px;
   margin: 0;
+  font-weight: 600;
 }
 
 /* League Select with Logos */
@@ -145,267 +127,100 @@
   position: relative;
   width: 100%;
 }
-
 .leagueSelectIcon {
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
-  transform: translateY(-45%);
-  width: 48px;
-  height: 48px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   pointer-events: none;
   z-index: 1;
 }
-
 .leagueSelect {
   padding-left: 42px !important;
-}
-
-.leagueSelect option {
-  padding: 8px 8px 8px 35px;
-  background-repeat: no-repeat;
-  background-position: 8px center;
-  background-size: 20px 20px;
-}
-
-.leagueSelect option[value="631799"] {
-  background-image: url("/logos/euroleague.png");
-}
-
-.leagueSelect option[value="eurocup"] {
-  background-image: url("/logos/eurocup.png");
-}
-
-.leagueSelect option[value="nba"] {
-  background-image: url("/logos/nba.png");
 }
 
 /* Player Search Dropdown */
 .playerSearchWrapper {
   position: relative;
 }
-
+.playerSearchRow {
+  display: flex;
+  gap: 10px;
+}
 .playerDropdown {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  max-height: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 240px;
   overflow-y: auto;
   z-index: 100;
   list-style: none;
   padding: 0;
-  margin: 4px 0 0 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 6px 0 0 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
-
 .playerDropdownItem {
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
   border-bottom: 1px solid #f0f0f0;
   color: #333;
 }
-
 .playerDropdownItem:hover {
-  background: #e3f2fd;
+  background: #f4f6f8;
 }
-
 .playerDropdownName {
   font-weight: 600;
 }
-
 .playerDropdownInfo {
-  font-size: 11px;
+  font-size: 12px;
   color: #666;
-  background: #f5f5f5;
-  padding: 2px 6px;
+  background: #f0f0f0;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
-/* Reset Button */
+/* Clear & Reset Buttons */
+.clearPlayerBtn {
+  padding: 0 14px;
+  background: #ffebee;
+  color: #e94560;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.clearPlayerBtn:hover {
+  background: #e94560;
+  color: white;
+}
+
 .resetFiltersBtn {
   width: 100%;
-  padding: 8px 16px;
-  background: white;
-  color: #333;
-  border: 1px solid #333; /* Changed from 2px dashed to 1px solid */
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 12px;
-
+  padding: 12px;
+  background: transparent;
+  color: #e94560;
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 15px;
-  margin-bottom: 0;
 }
-
 .resetFiltersBtn:hover {
   background: #fffafa;
-  color: #d32f2f; /* Slightly darker red on hover */
-  border-color: #d32f2f;
-}
-
-/* Extra Utility Styles (if used elsewhere in sidebar) */
-.searchInput {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  box-sizing: border-box;
-  margin-bottom: 10px;
-}
-
-.searchInput:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
-}
-
-.statsSummary {
-  margin-top: 15px;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #666;
-}
-
-.statsSummary p {
-  margin: 3px 0;
-}
-
-.manualLabel {
-  font-size: 12px;
-  font-weight: bold;
-  color: #666;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.manualInput {
-  width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  margin-bottom: 5px;
-  box-sizing: border-box;
-}
-
-.manualButton {
-  width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  border: none;
-  background: #ff9800;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.manualButton:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-/* Wrapper to hold input and absolute button */
-.inputWithClear {
-  position: relative;
-  width: 100%;
-}
-
-/* Add padding to the right when the X button is visible so text doesn't overlap */
-.filterInputActive {
-  padding-right: 32px !important;
-}
-
-/* The small X button inside the input */
-.clearInputBtn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 12px;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s;
-}
-
-/* Nice subtle hover effect */
-.clearInputBtn:hover {
-  background: #e0e0e0;
-  color: #e94560; /* Turns red on hover */
-}
-
-.dataSourceIndicator {
-  padding: 8px 16px;
-  background: #f0f0f0;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: #666;
-}
-
-.dataSourceButtons {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.button {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #f5f5f5;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.button:hover:not(:disabled) {
-  background: #e0e0e0;
-}
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.activeButton {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #4caf50;
-  border-radius: 6px;
-  background: #4caf50;
-  color: white;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.activeButton:hover {
-  background: #45a049;
 }
