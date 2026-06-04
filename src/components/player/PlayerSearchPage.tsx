@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { fetchPlayerSearch } from "../../api/api";
 import type { PlayerSearchResult } from "../../api/types";
 import PlayerToolbar from "./PlayerToolbar";
-import styles from "./PlayerStats.module.css"; // Reuse the page layout styles
+import styles from "./PlayerStats.module.css";
 
 export default function PlayerSearchPage() {
   const navigate = useNavigate();

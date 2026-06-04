@@ -99,6 +99,8 @@ export interface Tip {
   selection: "over" | "under";
   line: number;
   odds: number;
+  overOdds?: number;
+  underOdds?: number;
   hit_rates: {
     season: HitRate;
     last10: HitRate;

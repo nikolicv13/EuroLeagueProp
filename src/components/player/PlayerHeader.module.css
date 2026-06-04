@@ -1,81 +1,120 @@
 .headerContainer {
-  background: white;
+  /* 👇 Fully immersive team background */
+  background-color: var(--team-bg);
+  color: var(--team-text);
+
   padding: 24px;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
   margin-bottom: 1.5rem;
+
+  /* Smooth transition if the team changes */
+  transition: background-color 0.3s ease;
 }
 
+/* Top Row */
 .topRow {
   display: flex;
   align-items: center;
-  gap: 12px;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.teamLogo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
 .teamInfoLeft {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.teamLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  /* Add a subtle white/dark drop shadow so logos pop on colored backgrounds */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
 .teamInfo {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #666;
+  font-weight: 700;
+  color: var(--team-muted); /* Slightly transparent text */
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.opponentInfo {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--team-text);
+  background: var(--team-surface); /* Transparent pill */
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+/* Middle Row */
 .playerRow {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
 .playerName {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #16213e;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--team-text);
   margin: 0;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Prop Badge */
 .propBadge {
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: 20px; /* Pill shape */
   font-size: 0.875rem;
-  font-weight: bold;
-  color: white;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background-color: #16213e;
+
+  background-color: var(--team-surface); /* 15% transparent overlay */
+  color: var(--team-text);
+  border: 1px solid var(--team-muted);
+
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
-/* Dark Themed Averages Box */
+/* Optional: Add a subtle tint to Over/Under badges */
+.badgeOver {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+.badgeUnder {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+/* Bottom Row: Averages Box */
 .averagesBox {
-  background: #16213e;
-  border-radius: 8px;
+  /* 👇 The magic: 15% opacity white/black overlay */
+  background-color: var(--team-surface);
+  border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  border: 1px solid var(--team-muted);
 }
 
 .averagesTitle {
   font-size: 0.75rem;
-  font-weight: bold;
-  color: #8892b0;
+  font-weight: 800;
+  color: var(--team-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 }
 
 .averagesStats {
@@ -91,20 +130,14 @@
 
 .avgLabel {
   font-size: 0.75rem;
-  font-weight: bold;
-  color: #8892b0;
-  margin-bottom: 4px;
+  font-weight: 700;
+  color: var(--team-muted);
+  margin-bottom: 6px;
 }
 
 .avgValue {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #ffffff;
-}
-.opponentInfo {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--team-text);
+  line-height: 1;
 }

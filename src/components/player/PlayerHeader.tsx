@@ -1,4 +1,5 @@
 import styles from "./PlayerHeader.module.css";
+import { getTeamColor, getTeamTheme } from "../../utils/teamColors";
 
 export interface SeasonAverages {
   pts: number;
@@ -33,18 +34,39 @@ export default function PlayerHeader({
   averages,
   averagesTitle,
 }: PlayerHeaderProps) {
+  const teamColor = getTeamColor(teamId, teamAbbr);
+  const theme = getTeamTheme(teamColor);
   const formatMarket = (m: string) => {
-    if (m === "threes_made") return "3PT";
-    if (m === "pra") return "P+R+A";
-    if (m === "pa") return "P+A";
-    if (m === "pr") return "P+R";
-    if (m === "ra") return "R+A";
-    return m.charAt(0).toUpperCase() + m.slice(1);
+    const clean = m.replace(/_alt\d*/g, "");
+    switch (clean) {
+      case "threes_made":
+        return "3PT";
+      case "pra":
+        return "P+R+A";
+      case "pa":
+        return "P+A";
+      case "pr":
+        return "P+R";
+      case "ra":
+        return "R+A";
+      case "steals":
+        return "Steals";
+      case "blocks":
+        return "Blocks";
+      default:
+        return clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
   };
+  const cssVars = {
+    "--team-bg": theme.bg,
+    "--team-text": theme.text,
+    "--team-surface": theme.surface,
+    "--team-muted": theme.muted,
+  } as React.CSSProperties;
 
   return (
-    <div className={styles.headerContainer}>
-      {/* Top Row: Team Info (Left) vs Opponent (Right) */}
+    <div className={styles.headerContainer} style={cssVars}>
+      {/* Top Row */}
       <div className={styles.topRow}>
         <div className={styles.teamInfoLeft}>
           <img
@@ -57,7 +79,6 @@ export default function PlayerHeader({
             {teamAbbr || teamId} | {position || "N/A"}
           </span>
         </div>
-
         {(opponent || opponentTeamId) && (
           <div className={styles.opponentInfo}>
             vs {opponent || opponentTeamId}
@@ -65,12 +86,11 @@ export default function PlayerHeader({
         )}
       </div>
 
-      {/* Middle Row: Name & Prop Badge */}
+      {/* Middle Row */}
       <div className={styles.playerRow}>
         <h1 className={styles.playerName}>{playerName}</h1>
-        <span
-          className={`${styles.propBadge} ${selection === "over" ? styles.propBadgeOver : styles.propBadgeUnder}`}
-        >
+
+        <span className={styles.propBadge}>
           {selection.toUpperCase()} {line} {formatMarket(market)}
         </span>
       </div>

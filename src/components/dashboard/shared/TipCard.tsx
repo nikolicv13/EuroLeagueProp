@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-
+import { getTeamColor, getTeamTheme } from "../../../utils/teamColors";
 // Import the CSS Module
 import styles from "./TipCard.module.css";
 
@@ -156,12 +156,24 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
   const matchupLeft = tip.team_abbr ?? tip.team_id;
   const matchupRight = tip.opponent_abbr ?? tip.opponent_team_id;
 
+  const teamColor = getTeamColor(String(tip.team_id), tip.team_abbr);
+  const theme = getTeamTheme(teamColor);
+
+  // 👇 2. Inject CSS variables
+  const cssVars = {
+    "--team-bg": theme.bg,
+    "--team-text": theme.text,
+    "--team-surface": theme.surface,
+    "--team-muted": theme.muted,
+  } as React.CSSProperties;
+
   const offers: OddsOffer[] = tip.odds_offers?.length
     ? tip.odds_offers
     : [{ book: "Default", odds: tip.odds }];
 
   return (
-    <article className={styles.ppCard}>
+    // 👇 3. Apply the variables to the root card
+    <article className={styles.ppCard} style={cssVars}>
       {/* Header */}
       <header className={styles.ppHeader}>
         <div className={styles.ppHeaderLeft}>
@@ -199,10 +211,9 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
         </div>
       </header>
 
-      {/* Hit Rates */}
+      {/* ... Keep Hit Rates, Odds row, and Bottom actions EXACTLY the same ... */}
       <section className={styles.ppSection}>
         <div className={styles.ppSectionTitle}>Hit Rates</div>
-
         <div className={styles.ppStatsGrid}>
           <StatBox label="Season" hr={tip.hit_rates.season} />
           <StatBox label="L5" hr={tip.hit_rates.last5} />
@@ -215,7 +226,6 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
         </div>
       </section>
 
-      {/* Odds row */}
       <section className={styles.ppOdds}>
         {offers.map((o, idx) => (
           <button
@@ -231,7 +241,6 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
         ))}
       </section>
 
-      {/* Bottom actions */}
       <footer className={styles.ppActions}>
         <button
           className={`${styles.ppActionBtn} ${styles.ppActionBtnSecondary}`}
@@ -240,12 +249,10 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
         >
           Game Report
         </button>
-
         <button
           className={`${styles.ppActionBtn} ${styles.ppActionBtnPrimary}`}
           type="button"
           onClick={() => {
-            // Create safe fallbacks so we NEVER send actual nulls
             const oppTeamId =
               tip.opponent_team_id || tip.opponent_abbr || "UNK";
             const oppName =
@@ -255,9 +262,7 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
               "Opponent";
             const pos = tip.position || "UNK";
             const teamId = tip.team_id || "UNK";
-
             const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=E2025&leagueId=631799`;
-
             navigate(url, { state: tip });
           }}
         >

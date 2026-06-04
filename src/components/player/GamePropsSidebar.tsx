@@ -12,6 +12,7 @@ export interface GroupedProp {
   underOdds?: number;
   overTip?: Tip;
   underTip?: Tip;
+  tip: Tip;
 }
 
 interface GamePropsSidebarProps {
@@ -50,12 +51,27 @@ export default function GamePropsSidebar({
   };
 
   const formatMarket = (m: string) => {
-    if (m === "threes_made") return "3PT";
-    if (m === "pra") return "P+R+A";
-    if (m === "pa") return "P+A";
-    if (m === "pr") return "P+R";
-    if (m === "ra") return "R+A";
-    return m.charAt(0).toUpperCase() + m.slice(1);
+    // 1. Strip out _alt, _alt1, _alt2, etc.
+    const clean = m.replace(/_alt\d*/g, "");
+
+    switch (clean) {
+      case "threes_made":
+        return "3PT";
+      case "pra":
+        return "P+R+A";
+      case "pa":
+        return "P+A";
+      case "pr":
+        return "P+R";
+      case "ra":
+        return "R+A";
+      case "steals":
+        return "Steals";
+      case "blocks":
+        return "Blocks";
+      default:
+        return clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
   };
 
   return (
@@ -135,17 +151,32 @@ export default function GamePropsSidebar({
       {/* Props List */}
       <div className={styles.propsList}>
         {groupedTips.map((prop) => {
-          const isActive =
+          const isActiveLine =
             currentTip.player_id === prop.player_id &&
             currentTip.market === prop.market &&
             currentTip.line === prop.line;
-          const defaultTip = prop.overTip || prop.underTip;
+
+          const handleRowClick = () => {
+            // Default to "over" if it exists, otherwise fallback to "under"
+            const defaultSelection = prop.overOdds ? "over" : "under";
+            const defaultOdds =
+              prop.overOdds || prop.underOdds || prop.tip.odds;
+
+            // Create a complete synthetic tip to send to the toolbar
+            const syntheticTip = {
+              ...prop.tip,
+              selection: defaultSelection as "over" | "under",
+              odds: defaultOdds,
+            };
+
+            onTipClick(syntheticTip);
+          };
 
           return (
             <div
               key={prop.key}
-              className={`${styles.propItem} ${isActive ? styles.propItemActive : ""}`}
-              onClick={() => defaultTip && onTipClick(defaultTip)}
+              className={`${styles.propItem} ${isActiveLine ? styles.propItemActive : ""}`}
+              onClick={handleRowClick}
             >
               <img
                 src="/logos/placeholder.png"
@@ -160,13 +191,18 @@ export default function GamePropsSidebar({
                 </div>
               </div>
 
+              {/* ODDS CONTAINER */}
               <div className={styles.oddsContainer}>
                 {prop.overOdds && (
                   <div
-                    className={`${styles.oddBox} ${styles.oddBoxOver}`}
+                    className={`${styles.oddBox} ${styles.oddBoxOver} ${isActiveLine && currentTip.selection === "over" ? styles.oddBoxActive : ""}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (prop.overTip) onTipClick(prop.overTip);
+                      onTipClick({
+                        ...prop.tip,
+                        selection: "over",
+                        odds: prop.overOdds!,
+                      });
                     }}
                   >
                     O {prop.overOdds.toFixed(2)}
@@ -174,10 +210,14 @@ export default function GamePropsSidebar({
                 )}
                 {prop.underOdds && (
                   <div
-                    className={`${styles.oddBox} ${styles.oddBoxUnder}`}
+                    className={`${styles.oddBox} ${styles.oddBoxUnder} ${isActiveLine && currentTip.selection === "under" ? styles.oddBoxActive : ""}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (prop.underTip) onTipClick(prop.underTip);
+                      onTipClick({
+                        ...prop.tip,
+                        selection: "under",
+                        odds: prop.underOdds!,
+                      });
                     }}
                   >
                     U {prop.underOdds.toFixed(2)}

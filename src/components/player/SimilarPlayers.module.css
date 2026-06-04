@@ -1,20 +1,24 @@
 .similarPlayersContainer {
-  background: white;
-  padding: 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  margin-top: 20px;
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  margin-top: 0;
+
+  box-sizing: border-box;
 }
 .similarPlayersTitle {
-  margin: 0 0 15px 0;
-  font-size: 16px;
-  color: #333;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 .similarPlayerRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
 .similarPlayerRow:last-child {
@@ -23,32 +27,39 @@
 .similarPlayerInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
+  min-width: 0;
 }
 .similarPlayerTeamLogo {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 .similarPlayerName {
-  font-weight: bold;
-  font-size: 14px;
-  color: #333;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .similarPlayerStats {
   display: flex;
-  align-items: center;
-  gap: 15px;
-  font-size: 14px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 .similarPlayerAvg {
   color: #888;
+  font-size: 11px;
 }
 .similarPlayerGameStatOver {
   font-weight: bold;
-  color: #4caf50;
+  color: var(--success);
 }
 .similarPlayerGameStatUnder {
   font-weight: bold;
-  color: #e94560;
+  color: var(--danger);
 }

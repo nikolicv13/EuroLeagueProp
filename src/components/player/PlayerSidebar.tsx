@@ -209,9 +209,7 @@ export default function PlayerSidebar(props: PlayerSidebarProps) {
       >
         {/* WITH Teammate */}
         <div className={styles.filterGroup}>
-          <label className={styles.filterLabel} style={{ color: "#4caf50" }}>
-            With Teammate
-          </label>
+          <label className={styles.filterLabel}>With Teammate</label>
           <div className={styles.inputWithClear}>
             <input
               type="text"
@@ -261,9 +259,7 @@ export default function PlayerSidebar(props: PlayerSidebarProps) {
 
         {/* WITHOUT Teammate */}
         <div className={styles.filterGroup}>
-          <label className={styles.filterLabel} style={{ color: "#e94560" }}>
-            Without Teammate
-          </label>
+          <label className={styles.filterLabel}>Without Teammate</label>
           <div className={styles.inputWithClear}>
             <input
               type="text"

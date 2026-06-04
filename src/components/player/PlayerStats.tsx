@@ -658,14 +658,17 @@ export default function PlayerStats() {
           player_id: tip.player_id,
           market: tip.market,
           line: tip.line,
+          // 👇 Read directly from the JSON object
+          overOdds:
+            tip.overOdds || (tip.selection === "over" ? tip.odds : undefined),
+          underOdds:
+            tip.underOdds || (tip.selection === "under" ? tip.odds : undefined),
+          tip: tip, // Keep a reference to the original object
         };
-      }
-      if (tip.selection === "over") {
-        groups[key].overOdds = tip.odds;
-        groups[key].overTip = tip;
       } else {
-        groups[key].underOdds = tip.odds;
-        groups[key].underTip = tip;
+        // Fallback if API sends two separate objects for the same line
+        if (tip.overOdds) groups[key].overOdds = tip.overOdds;
+        if (tip.underOdds) groups[key].underOdds = tip.underOdds;
       }
     });
     return Object.values(groups);
@@ -746,19 +749,19 @@ export default function PlayerStats() {
 
   // --- RENDER ---
   return (
-    <div className={styles.pageLayout}>
-      <GamePropsSidebar
-        availableGames={availableGames}
-        selectedGameId={selectedGameId}
-        setSelectedGameId={setSelectedGameId}
-        propFilter={sidebarPropFilter}
-        setPropFilter={setSidebarPropFilter}
-        groupedTips={groupedSidebarTips}
-        currentTip={tip}
-        onTipClick={handleSidebarClick}
-      />
-      <div className={styles.mainContent}>
-        <div className={styles.container}>
+    <div className={styles.pageWrapper}>
+      <div className={styles.pageLayout}>
+        <GamePropsSidebar
+          availableGames={availableGames}
+          selectedGameId={selectedGameId}
+          setSelectedGameId={setSelectedGameId}
+          propFilter={sidebarPropFilter}
+          setPropFilter={setSidebarPropFilter}
+          groupedTips={groupedSidebarTips}
+          currentTip={tip}
+          onTipClick={handleSidebarClick}
+        />
+        <div className={styles.mainContent}>
           <PlayerToolbar
             searchQuery={searchQuery}
             handleSearchChange={handleSearchChange}
@@ -803,13 +806,15 @@ export default function PlayerStats() {
             fullH2HChartData={fullH2HChartData}
             selectedOppPlayer={selectedOppPlayer}
           />
-          <DefenseSection
-            defenseData={defenseData}
-            defenseLimit={defenseLimit}
-            setDefenseLimit={setDefenseLimit}
-            tip={tip}
-          />
-          <SimilarPlayersSection similarPlayers={similarPlayers} tip={tip} />
+          <div className={styles.splitRow}>
+            <DefenseSection
+              defenseData={defenseData}
+              defenseLimit={defenseLimit}
+              setDefenseLimit={setDefenseLimit}
+              tip={tip}
+            />
+            <SimilarPlayersSection similarPlayers={similarPlayers} tip={tip} />
+          </div>
           <GameLogTable
             fullSeasonChartData={fullSeasonChartData}
             logPage={logPage}
