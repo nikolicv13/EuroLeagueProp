@@ -262,7 +262,7 @@
 
 .ppActionBtnSecondary {
   color: #475569;
-  border-color: black;
+  border-color: #3777af;
 }
 
 .ppActionBtnSecondary:hover {
@@ -273,7 +273,7 @@
 /* Primary Button (View Stats) */
 .ppActionBtnPrimary {
   color: #475569;
-  border-color: black;
+  border-color: #3777af;
 }
 
 .ppActionBtnPrimary:hover {

@@ -193,21 +193,6 @@ export default function GamePropsSidebar({
 
               {/* ODDS CONTAINER */}
               <div className={styles.oddsContainer}>
-                {prop.overOdds && (
-                  <div
-                    className={`${styles.oddBox} ${styles.oddBoxOver} ${isActiveLine && currentTip.selection === "over" ? styles.oddBoxActive : ""}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTipClick({
-                        ...prop.tip,
-                        selection: "over",
-                        odds: prop.overOdds!,
-                      });
-                    }}
-                  >
-                    O {prop.overOdds.toFixed(2)}
-                  </div>
-                )}
                 {prop.underOdds && (
                   <div
                     className={`${styles.oddBox} ${styles.oddBoxUnder} ${isActiveLine && currentTip.selection === "under" ? styles.oddBoxActive : ""}`}
@@ -221,6 +206,21 @@ export default function GamePropsSidebar({
                     }}
                   >
                     U {prop.underOdds.toFixed(2)}
+                  </div>
+                )}
+                {prop.overOdds && (
+                  <div
+                    className={`${styles.oddBox} ${styles.oddBoxOver} ${isActiveLine && currentTip.selection === "over" ? styles.oddBoxActive : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTipClick({
+                        ...prop.tip,
+                        selection: "over",
+                        odds: prop.overOdds!,
+                      });
+                    }}
+                  >
+                    O {prop.overOdds.toFixed(2)}
                   </div>
                 )}
               </div>

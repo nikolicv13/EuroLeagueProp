@@ -1,22 +1,45 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import styles from "./Header.module.css";
 
 export default function Header() {
+  const [hidden, setHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      const THRESHOLD = 10;
+
+      if (currentScrollY > lastScrollY && currentScrollY > THRESHOLD) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   return (
-    <header className={styles.siteHeader}>
+    <header
+      className={`${styles.siteHeader} ${hidden ? styles.headerHidden : ""}`}
+    >
       <div className={styles.siteHeaderInner}>
         {/* Left Section: Logo */}
-        <NavLink to="/" className={styles.logo}>
-          PropAlley <span className={styles.betaBadge}>BETA</span>
-        </NavLink>
+        <div className={`${styles.headerSection} ${styles.headerLeft}`}>
+          <NavLink to="/" className={styles.logo}>
+            PropScout <span className={styles.betaBadge}>BETA</span>
+          </NavLink>
+        </div>
 
         {/* Middle Section: Navigation */}
         <div className={`${styles.headerSection} ${styles.headerCenter}`}>
           <nav className={styles.nav}>
-            {/* 
-              Use the className callback to apply the active style dynamically.
-              This is the proper way to use CSS Modules with NavLink!
-            */}
             <NavLink
               to="/"
               end

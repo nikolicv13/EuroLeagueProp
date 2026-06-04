@@ -38,7 +38,7 @@
   top: 50%;
   transform: translateY(-50%);
   height: 6px;
-  background: #4caf50;
+  background: #3777af;
   border-radius: 3px;
   z-index: 2;
 }
@@ -63,7 +63,7 @@
   -webkit-appearance: none;
   width: 24px;
   height: 24px; /* Bigger thumb */
-  background: #0f3460;
+  background: #3777af;
   border: 3px solid #fff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -74,7 +74,7 @@
   pointer-events: auto;
   width: 20px;
   height: 20px;
-  background: #0f3460;
+  background: #3777af;
   border: 3px solid #fff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -82,5 +82,4 @@
 }
 .rangeSlider input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.15);
-  background: #4caf50;
 }

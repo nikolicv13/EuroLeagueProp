@@ -5,16 +5,19 @@
   background: white;
   border-bottom: 1px solid #f0f0f0;
   transition: box-shadow 150ms ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
+.headerHidden {
+  transform: translateY(-100%);
+}
 .siteHeaderInner {
   width: 100%;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 24px;
   height: 64px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .headerSection {
@@ -80,7 +83,7 @@
 }
 
 .buttonPrimary {
-  background: #2563eb;
+  background: #3777af;
   color: white;
 }
 

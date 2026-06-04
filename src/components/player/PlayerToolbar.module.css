@@ -124,21 +124,21 @@
 }
 .formLabel {
   font-size: 0.6875rem;
-  font-weight: bold;
-  color: #888;
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .formInput,
 .formSelect {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #333;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
   background: white;
   box-sizing: border-box;
   transition: all 0.2s;
@@ -146,8 +146,14 @@
 .formInput:focus,
 .formSelect:focus {
   outline: none;
-  border-color: #0f3460;
+  border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.1);
+}
+.formSelect option:disabled {
+  color: var(--text-muted);
+  background-color: var(--bg-hover);
+  font-style: italic;
+  font-weight: 500;
 }
 
 .searchBtn {
@@ -155,7 +161,7 @@
   padding: 12px 20px; /* Slightly taller for full width */
   border-radius: 6px;
   border: none;
-  background: #0f3460;
+  background: #3777af;
   color: white;
   font-weight: bold;
   cursor: pointer;

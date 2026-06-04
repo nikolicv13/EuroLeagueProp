@@ -7,7 +7,7 @@ export default function PricingPage() {
         <div className={styles.icon}>💎</div>
         <h1 className={styles.title}>Pricing</h1>
         <p className={styles.subtitle}>
-          PropScout is currently in{" "}
+          PropAlley is currently in{" "}
           <span className={styles.highlight}>Beta</span>, which means the entire
           platform is completely <strong>free to use</strong> right now.
           <br />
@@ -17,8 +17,8 @@ export default function PricingPage() {
           <br />
           <br />
           <em>
-            Don't worry—there will always be a robust free tier so you can keep
-            finding your edge.
+            Don't worry—there will always be a free tier so you can keep finding
+            your edge.
           </em>
         </p>
       </div>

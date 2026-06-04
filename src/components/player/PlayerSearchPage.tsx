@@ -1,15 +1,15 @@
+// src/components/player/PlayerSearchPage.tsx
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { fetchPlayerSearch } from "../../api/api";
 import type { PlayerSearchResult } from "../../api/types";
 import PlayerToolbar from "./PlayerToolbar";
-import styles from "./PlayerStats.module.css";
+import styles from "./PlayerStats.module.css"; // Reusing the wrapper styles
 
 export default function PlayerSearchPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Pre-fill league from URL if it exists (e.g., ?leagueId=631799)
   const [inputLeague, setInputLeague] = useState(
     searchParams.get("leagueId") || "631799",
   );
@@ -50,9 +50,8 @@ export default function PlayerSearchPage() {
   };
 
   const handleSearch = () => {
-    if (!selectedPlayer) return; // Prevent search if no player selected
+    if (!selectedPlayer) return;
 
-    // Build the URL with all the parameters
     const params = new URLSearchParams();
     params.set("leagueId", inputLeague);
     params.set("propType", inputMarket);
@@ -61,7 +60,6 @@ export default function PlayerSearchPage() {
     params.set("teamId", selectedPlayer.team_id);
     params.set("position", selectedPlayer.position);
 
-    // Navigate to the PlayerStats page
     navigate(`/player-stats/${selectedPlayer.player_id}?${params.toString()}`, {
       state: {
         player_id: selectedPlayer.player_id,
@@ -77,12 +75,17 @@ export default function PlayerSearchPage() {
   };
 
   return (
-    <div
-      className={styles.pageLayout}
-      style={{ justifyContent: "center", paddingTop: "4rem" }}
-    >
-      <div style={{ width: "100%", maxWidth: "900px" }}>
-        <h1 style={{ marginBottom: "24px", color: "#16213e" }}>
+    <div className={styles.pageWrapper}>
+      <div style={{ width: "100%", maxWidth: "1000px", marginTop: "40px" }}>
+        <h1
+          style={{
+            marginBottom: "32px",
+            color: "var(--text-primary)",
+            textAlign: "center",
+            fontSize: "2rem",
+            fontWeight: 800,
+          }}
+        >
           Player Prop Search
         </h1>
 
@@ -94,7 +97,6 @@ export default function PlayerSearchPage() {
           setShowDropdown={setShowDropdown}
           handleSelectPlayer={handleSelectPlayer}
           inputLeague={inputLeague}
-          showLeagueFilter={true}
           setInputLeague={setInputLeague}
           inputOverUnder={inputOverUnder}
           setInputOverUnder={setInputOverUnder}
@@ -103,6 +105,7 @@ export default function PlayerSearchPage() {
           inputMarket={inputMarket}
           setInputMarket={setInputMarket}
           handleSearch={handleSearch}
+          showLeagueFilter={true}
         />
       </div>
     </div>

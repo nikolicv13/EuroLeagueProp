@@ -105,8 +105,13 @@ export default function PlayerToolbar(props: PlayerToolbarProps) {
                 className={styles.formSelect}
               >
                 <option value="631799">Euroleague</option>
-                <option value="eurocup">Eurocup</option>
-                <option value="nba">NBA</option>
+
+                <option value="eurocup" disabled>
+                  Eurocup (Coming Soon)
+                </option>
+                <option value="nba" disabled>
+                  NBA (Coming Soon)
+                </option>
               </select>
             </div>
           )}

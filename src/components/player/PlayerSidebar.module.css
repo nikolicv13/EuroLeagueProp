@@ -85,7 +85,7 @@
   box-sizing: border-box;
 }
 .venueToggleButtonActive {
-  background: #0f3460;
+  background: #3777af;
   color: white;
   border-right: 1px solid #0f3460;
 }
@@ -108,7 +108,7 @@
   cursor: pointer;
   width: 16px;
   height: 16px;
-  accent-color: #0f3460;
+  accent-color: #3777af;
 }
 .checkboxItemDisabled {
   opacity: 0.4;
