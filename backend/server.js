@@ -908,15 +908,17 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
   // ===== MOCK MODE =====
   if (USE_MOCK_ODDS) {
     try {
-      // Read the saved file and return it instantly
-      const filePath = path.join(__dirname, "mocks", "brazilbet_odds_2.json");
-      const mockData = fs.readFileSync(filePath, "utf8");
-      return res.json(JSON.parse(mockData));
+      // Query the 'odds' table we created in Supabase
+      const result = await pool.query(
+        "SELECT * FROM odds WHERE league_id = $1 ORDER BY start_time ASC",
+        [leagueId],
+      );
+      return res.json(result.rows);
     } catch (error) {
-      console.error("Error reading mock file:", error);
+      console.error("Error reading mock data from DB:", error);
       return res
         .status(500)
-        .json({ error: "Mock data file not found or invalid" });
+        .json({ error: "Failed to fetch mock data from DB" });
     }
   }
 
