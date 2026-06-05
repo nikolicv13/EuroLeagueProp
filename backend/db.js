@@ -1,15 +1,20 @@
-import "dotenv/config"; // Loads the secrets from .env
-import pg from "pg";
+import pkg from "pg";
+const { Pool } = pkg;
+import dotenv from "dotenv";
 
-const { Pool } = pg;
+dotenv.config();
 
-// Create a "pool" of connections to your database
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+// Test the connection
+pool.query("SELECT NOW()", (err, res) => {
+  if (err) console.error("❌ Database connection error:", err);
+  else console.log("✅ Successfully connected to Supabase!");
 });
 
 export default pool;
