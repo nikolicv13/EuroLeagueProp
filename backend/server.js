@@ -905,15 +905,26 @@ app.get("/api/players/search", async (req, res) => {
 // ROUTE 10: Fetch Expanded Props from BrazilBet
 // ==========================================
 app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
+  const { leagueId } = req.params;
   // ===== MOCK MODE =====
   if (USE_MOCK_ODDS) {
     try {
-      // Query the 'odds' table we created in Supabase
       const result = await pool.query(
         "SELECT * FROM odds WHERE league_id = $1 ORDER BY start_time ASC",
         [leagueId],
       );
-      return res.json(result.rows);
+
+      // 👇 FIX: Convert Postgres string numbers back to actual JS numbers
+      const parsedData = result.rows.map((row) => ({
+        ...row,
+        line: row.line ? parseFloat(row.line) : 0,
+        odds: row.odds ? parseFloat(row.odds) : 1.9,
+        overOdds: row.overOdds ? parseFloat(row.overOdds) : undefined,
+        underOdds: row.underOdds ? parseFloat(row.underOdds) : undefined,
+        score: row.score ? parseFloat(row.score) : 0,
+      }));
+
+      return res.json(parsedData);
     } catch (error) {
       console.error("Error reading mock data from DB:", error);
       return res
@@ -921,8 +932,6 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
         .json({ error: "Failed to fetch mock data from DB" });
     }
   }
-
-  const { leagueId } = req.params;
 
   try {
     // 1. Fetch League Data
