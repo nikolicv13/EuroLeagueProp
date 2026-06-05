@@ -1,19 +1,32 @@
 import express from "express";
 import cors from "cors";
-import pool from "./db.js";
+import pool from "./db.js"; // This now securely connects to Supabase!
 import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
+import dotenv from "dotenv"; // 👈 1. Import dotenv
+
+dotenv.config(); // 👈 2. Load your .env variables
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
 
-app.use(cors());
+const PORT = process.env.PORT || 3001;
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://your-vercel-app.vercel.app",
+      "*",
+    ],
+  }),
+);
 app.use(express.json());
-const USE_MOCK_ODDS = true;
+
+const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "true";
 
 function getMarketValue(game, market) {
   const pts = parseFloat(game.points) || 0;
@@ -1336,5 +1349,5 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
 // START THE SERVER
 // ==========================================
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
