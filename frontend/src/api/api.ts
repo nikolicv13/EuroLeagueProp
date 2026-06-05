@@ -7,7 +7,8 @@ import type {
   SimilarPlayer,
 } from "./types";
 
-const API_URL = "http://localhost:3001/api";
+const API_URL =
+  (import.meta.env.VITE_API_URL || "http://localhost:3001") + "/api";
 
 // Fetch games by date (defaults to today)
 export async function fetchGames(date: string): Promise<Game[]> {
