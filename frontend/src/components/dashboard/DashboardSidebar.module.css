@@ -69,7 +69,30 @@
   background-color: #f9f9f9;
   font-style: italic;
 }
-
+.clearInputBtn {
+  position: absolute;
+  right: 8px;
+  top: 70%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.clearInputBtn:hover {
+  background: #e0e0e0;
+  color: #e94560;
+}
 /* Mode Toggle Buttons */
 .modeToggleContainer {
   display: flex;
