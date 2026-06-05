@@ -911,13 +911,22 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
         [leagueId],
       );
 
-      // 👇 FIX: Convert Postgres string numbers back to actual JS numbers
+      // 👇 FIX: Handle Supabase lowercase column names
       const parsedData = result.rows.map((row) => ({
         ...row,
         line: row.line ? parseFloat(row.line) : 0,
         odds: row.odds ? parseFloat(row.odds) : 1.9,
-        overOdds: row.overOdds ? parseFloat(row.overOdds) : undefined,
-        underOdds: row.underOdds ? parseFloat(row.underOdds) : undefined,
+        // Check for both camelCase and lowercase
+        overOdds: row.overOdds
+          ? parseFloat(row.overOdds)
+          : row.overodds
+            ? parseFloat(row.overodds)
+            : undefined,
+        underOdds: row.underOdds
+          ? parseFloat(row.underOdds)
+          : row.underodds
+            ? parseFloat(row.underodds)
+            : undefined,
         score: row.score ? parseFloat(row.score) : 0,
       }));
 

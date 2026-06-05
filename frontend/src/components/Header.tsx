@@ -33,7 +33,7 @@ export default function Header() {
         {/* Left Section: Logo */}
         <div className={`${styles.headerSection} ${styles.headerLeft}`}>
           <NavLink to="/" className={styles.logo}>
-            PropScout <span className={styles.betaBadge}>BETA</span>
+            PropAlley <span className={styles.betaBadge}>BETA</span>
           </NavLink>
         </div>
 
