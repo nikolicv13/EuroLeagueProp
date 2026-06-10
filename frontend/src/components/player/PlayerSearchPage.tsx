@@ -59,7 +59,7 @@ export default function PlayerSearchPage() {
     params.set("overUnder", inputOverUnder);
     params.set("teamId", selectedPlayer.team_id);
     params.set("position", selectedPlayer.position);
-
+    params.set("season", "E2025");
     navigate(`/player-stats/${selectedPlayer.player_id}?${params.toString()}`, {
       state: {
         player_id: selectedPlayer.player_id,

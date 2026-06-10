@@ -140,7 +140,8 @@ app.get("/api/players/:id/stats", async (req, res) => {
   try {
     const playerId = req.params.id;
     // Ensure limit is a number, default to 10
-    const limit = parseInt(req.query.limit, 10) || 50;
+    const limitParam = req.query.limit;
+    const limit = limitParam !== undefined ? parseInt(limitParam, 10) : 50;
     const opponent = req.query.opponent;
     const seasonCode = req.query.season;
     const gameDate = req.query.date;

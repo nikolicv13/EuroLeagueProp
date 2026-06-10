@@ -556,6 +556,38 @@ export default function PlayerStats() {
   }, [searchParams, selectedGameId]);
 
   useEffect(() => {
+    // If we already have an opponent, or don't have a player, do nothing
+    if (!tip.player_id || tip.opponent_team_id) return;
+
+    // Wait for the league odds to load
+    if (allLeagueOdds.length === 0) return;
+
+    // Find the current player in the live odds
+    const liveTip = allLeagueOdds.find((t) => t.player_id === tip.player_id);
+
+    // If we found them, and they have an opponent, patch the URL!
+    if (liveTip && liveTip.opponent_team_id) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("oppTeam", liveTip.opponent_team_id);
+      newParams.set("oppName", encodeURIComponent(liveTip.opponent || ""));
+      if (liveTip.team_id) newParams.set("teamId", liveTip.team_id);
+      if (liveTip.position) newParams.set("position", liveTip.position);
+
+      // Use replace: true so it doesn't break the browser "Back" button
+      navigate(`${location.pathname}?${newParams.toString()}`, {
+        replace: true,
+      });
+    }
+  }, [
+    allLeagueOdds,
+    tip.player_id,
+    tip.opponent_team_id,
+    location.pathname,
+    navigate,
+    searchParams,
+  ]);
+
+  useEffect(() => {
     if (
       !tip.opponent_team_id ||
       !tip.position ||
