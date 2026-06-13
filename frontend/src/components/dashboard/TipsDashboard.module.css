@@ -1,3 +1,4 @@
+/* tipsDashboard.css */
 .dashboardWrapper {
   width: 100%;
   min-height: 100vh;
@@ -73,4 +74,193 @@
   max-width: 1440px;
   gap: 48px;
   align-items: flex-start;
+}
+/* ==========================================
+   MOBILE FILTER DRAWER (New component styles)
+   ========================================== */
+.mobileOverlay {
+  display: none;
+}
+.mobileDrawer {
+  display: none;
+}
+.mobileFilterFab {
+  display: none;
+}
+.desktopSidebar {
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 80px;
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 1200px) {
+  .dashboardContainer {
+    gap: 32px;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Hide desktop sidebar, show mobile drawer system */
+  .desktopSidebar {
+    display: none;
+  }
+
+  .mobileOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .mobileDrawer {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 340px;
+    max-width: 85vw;
+    background: #fff;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobileDrawerOpen {
+    transform: translateX(0);
+  }
+
+  .mobileDrawerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+  }
+
+  .mobileDrawerTitle {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #16213e;
+  }
+
+  .mobileDrawerClose {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .mobileDrawerClose:hover {
+    background: #f0f0f0;
+  }
+
+  .mobileDrawerBody {
+    padding: 16px;
+  }
+
+  /* FAB */
+  .mobileFilterFab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    padding: 14px 24px;
+    background: #3777af;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(55, 119, 175, 0.4);
+    transition: all 0.2s;
+  }
+
+  .mobileFilterFab:hover {
+    background: #2d6a9e;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(55, 119, 175, 0.5);
+  }
+
+  .fabBadge {
+    background: #f59e0b;
+    color: #000;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 10px;
+    line-height: 1.2;
+  }
+
+  .dashboardContainer {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboardWrapper {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .sortToggleGroup {
+    border-radius: 10px;
+  }
+
+  .sortButton,
+  .sortButtonActive {
+    padding: 8px 0;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sortToggleGroup {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-radius: 10px;
+  }
+
+  .sortButton,
+  .sortButtonActive {
+    padding: 10px 4px;
+    font-size: 11px;
+  }
+
+  .mobileFilterFab {
+    bottom: 16px;
+    right: 16px;
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

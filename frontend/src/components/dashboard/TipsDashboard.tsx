@@ -10,6 +10,7 @@ export default function TipsDashboard() {
   // --- STATE ---
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [oddsLeagueId, setOddsLeagueId] = useState("631799");
   const [jsonGames, setJsonGames] = useState<JsonGame[]>([]);
@@ -33,6 +34,13 @@ export default function TipsDashboard() {
 
   const TIPS_PER_PAGE = 10;
   const testDate = "2026-05-24"; // Kept for TipCard display
+
+  useEffect(() => {
+    document.body.style.overflow = mobileFilterOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileFilterOpen]);
 
   // --- HANDLERS ---
   const handlePlayerSearchChange = async (
@@ -215,6 +223,22 @@ export default function TipsDashboard() {
     maxOdds,
     activeSort,
   ]);
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedJsonGameId !== "all") count++;
+    if (selectedTeamFilter !== "all") count++;
+    if (selectedPlayerFilter) count++;
+    if (selectedPropFilter !== "all") count++;
+    if (minOdds > 1.0 || maxOdds < 10.0) count++;
+    return count;
+  }, [
+    selectedJsonGameId,
+    selectedTeamFilter,
+    selectedPlayerFilter,
+    selectedPropFilter,
+    minOdds,
+    maxOdds,
+  ]);
 
   // --- RENDER ---
   const sortOptions: { value: SortType; label: string }[] = [
@@ -228,6 +252,66 @@ export default function TipsDashboard() {
 
   return (
     <div className={styles.dashboardWrapper}>
+      {/* 👈 MOBILE FILTER OVERLAY */}
+      {mobileFilterOpen && (
+        <div
+          className={styles.mobileOverlay}
+          onClick={() => setMobileFilterOpen(false)}
+        />
+      )}
+
+      {/* 👈 MOBILE FILTER DRAWER */}
+      <div
+        className={`${styles.mobileDrawer} ${mobileFilterOpen ? styles.mobileDrawerOpen : ""}`}
+      >
+        <div className={styles.mobileDrawerHeader}>
+          <span className={styles.mobileDrawerTitle}>Filters</span>
+          <button
+            className={styles.mobileDrawerClose}
+            onClick={() => setMobileFilterOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+        <div className={styles.mobileDrawerBody}>
+          <DashboardSidebar
+            oddsLeagueId={oddsLeagueId}
+            setOddsLeagueId={setOddsLeagueId}
+            jsonGames={jsonGames}
+            selectedJsonGameId={selectedJsonGameId}
+            setSelectedJsonGameId={(id) => {
+              setSelectedJsonGameId(id);
+              setCurrentPage(1);
+            }}
+            jsonTeams={jsonTeams}
+            selectedTeamFilter={selectedTeamFilter}
+            setSelectedTeamFilter={(team) => {
+              setSelectedTeamFilter(team);
+              setCurrentPage(1);
+            }}
+            playerSearchQuery={playerSearchQuery}
+            handlePlayerSearchChange={handlePlayerSearchChange}
+            playerSearchResults={playerSearchResults}
+            showPlayerDropdown={showPlayerDropdown}
+            setShowPlayerDropdown={setShowPlayerDropdown}
+            selectedPlayerFilter={selectedPlayerFilter}
+            handleSelectPlayer={handleSelectPlayer}
+            clearPlayerFilter={clearPlayerFilter}
+            selectedPropFilter={selectedPropFilter}
+            setSelectedPropFilter={(prop) => {
+              setSelectedPropFilter(prop);
+              setCurrentPage(1);
+            }}
+            minOdds={minOdds}
+            maxOdds={maxOdds}
+            handleMinOddsChange={handleMinOddsChange}
+            handleMaxOddsChange={handleMaxOddsChange}
+            resetDashboardFilters={resetDashboardFilters}
+            tipsCount={tips.length}
+          />
+        </div>
+      </div>
+
       {/* GLOBAL SORT BAR */}
       <div className={styles.sortBarContainer}>
         <div className={styles.sortToggleGroup}>
@@ -252,41 +336,44 @@ export default function TipsDashboard() {
 
       {/* MAIN CONTENT */}
       <div className={styles.dashboardContainer}>
-        <DashboardSidebar
-          oddsLeagueId={oddsLeagueId}
-          setOddsLeagueId={setOddsLeagueId}
-          jsonGames={jsonGames}
-          selectedJsonGameId={selectedJsonGameId}
-          setSelectedJsonGameId={(id) => {
-            setSelectedJsonGameId(id);
-            setCurrentPage(1);
-          }}
-          jsonTeams={jsonTeams}
-          selectedTeamFilter={selectedTeamFilter}
-          setSelectedTeamFilter={(team) => {
-            setSelectedTeamFilter(team);
-            setCurrentPage(1);
-          }}
-          playerSearchQuery={playerSearchQuery}
-          handlePlayerSearchChange={handlePlayerSearchChange}
-          playerSearchResults={playerSearchResults}
-          showPlayerDropdown={showPlayerDropdown}
-          setShowPlayerDropdown={setShowPlayerDropdown}
-          selectedPlayerFilter={selectedPlayerFilter}
-          handleSelectPlayer={handleSelectPlayer}
-          clearPlayerFilter={clearPlayerFilter}
-          selectedPropFilter={selectedPropFilter}
-          setSelectedPropFilter={(prop) => {
-            setSelectedPropFilter(prop);
-            setCurrentPage(1);
-          }}
-          minOdds={minOdds}
-          maxOdds={maxOdds}
-          handleMinOddsChange={handleMinOddsChange}
-          handleMaxOddsChange={handleMaxOddsChange}
-          resetDashboardFilters={resetDashboardFilters}
-          tipsCount={tips.length}
-        />
+        {/* 👈 DESKTOP SIDEBAR (hidden on mobile via CSS) */}
+        <div className={styles.desktopSidebar}>
+          <DashboardSidebar
+            oddsLeagueId={oddsLeagueId}
+            setOddsLeagueId={setOddsLeagueId}
+            jsonGames={jsonGames}
+            selectedJsonGameId={selectedJsonGameId}
+            setSelectedJsonGameId={(id) => {
+              setSelectedJsonGameId(id);
+              setCurrentPage(1);
+            }}
+            jsonTeams={jsonTeams}
+            selectedTeamFilter={selectedTeamFilter}
+            setSelectedTeamFilter={(team) => {
+              setSelectedTeamFilter(team);
+              setCurrentPage(1);
+            }}
+            playerSearchQuery={playerSearchQuery}
+            handlePlayerSearchChange={handlePlayerSearchChange}
+            playerSearchResults={playerSearchResults}
+            showPlayerDropdown={showPlayerDropdown}
+            setShowPlayerDropdown={setShowPlayerDropdown}
+            selectedPlayerFilter={selectedPlayerFilter}
+            handleSelectPlayer={handleSelectPlayer}
+            clearPlayerFilter={clearPlayerFilter}
+            selectedPropFilter={selectedPropFilter}
+            setSelectedPropFilter={(prop) => {
+              setSelectedPropFilter(prop);
+              setCurrentPage(1);
+            }}
+            minOdds={minOdds}
+            maxOdds={maxOdds}
+            handleMinOddsChange={handleMinOddsChange}
+            handleMaxOddsChange={handleMaxOddsChange}
+            resetDashboardFilters={resetDashboardFilters}
+            tipsCount={tips.length}
+          />
+        </div>
 
         <TipsList
           loading={loading}
@@ -297,6 +384,31 @@ export default function TipsDashboard() {
           testDate={testDate}
         />
       </div>
+
+      {/* 👈 FLOATING FILTER BUTTON (mobile only) */}
+      <button
+        className={styles.mobileFilterFab}
+        onClick={() => setMobileFilterOpen(true)}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="8" y1="12" x2="20" y2="12" />
+          <line x1="12" y1="18" x2="20" y2="18" />
+        </svg>
+        Filters
+        {activeFilterCount > 0 && (
+          <span className={styles.fabBadge}>{activeFilterCount}</span>
+        )}
+      </button>
     </div>
   );
 }

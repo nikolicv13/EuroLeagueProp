@@ -446,11 +446,13 @@ export default function PlayerStats() {
   useEffect(() => {
     if (!tip.player_id) return;
     (async () => {
+      const seasonToFetch = selectedOppPlayer?.id ? undefined : selectedSeason;
+
       const data = await fetchPlayerStats(
         tip.player_id,
         0,
         undefined,
-        selectedSeason,
+        seasonToFetch,
         undefined,
         selectedOppPlayer?.id,
         selectedWith?.id,
@@ -851,7 +853,9 @@ export default function PlayerStats() {
             fullSeasonChartData={fullSeasonChartData}
             logPage={logPage}
             setLogPage={setLogPage}
-            selectedSeason={selectedSeason}
+            selectedSeason={
+              selectedOppPlayer?.id ? "All Seasons" : selectedSeason
+            }
             phaseFilter={phaseFilter}
             venueFilter={venueFilter}
           />

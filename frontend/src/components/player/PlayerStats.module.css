@@ -1,3 +1,4 @@
+/* playerStats.css */
 .pageLayout {
   display: flex;
   width: 100%;
@@ -84,5 +85,41 @@
   }
   .splitRow {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .pageLayout {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    max-width: 100%;
+  }
+
+  .mainContent {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .splitRow {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .pageWrapper {
+    padding: 16px;
+  }
+}
+
+/* ==========================================
+   MOBILE: < 768px
+   ========================================== */
+@media (max-width: 768px) {
+  .pageWrapper {
+    padding: 12px 8px;
+  }
+
+  .mainContent {
+    gap: 20px;
   }
 }

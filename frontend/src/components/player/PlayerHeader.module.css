@@ -1,18 +1,15 @@
+/* palyerHeader.css */
 .headerContainer {
-  /* 👇 Fully immersive team background */
   background-color: var(--team-bg);
   color: var(--team-text);
-
   padding: 24px;
   border-radius: 12px;
   box-shadow: var(--shadow-md);
   margin-bottom: 1.5rem;
 
-  /* Smooth transition if the team changes */
   transition: background-color 0.3s ease;
 }
 
-/* Top Row */
 .topRow {
   display: flex;
   align-items: center;
@@ -140,4 +137,68 @@
   font-weight: 900;
   color: var(--team-text);
   line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .headerContainer {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .playerName {
+    font-size: 1.5rem;
+  }
+
+  .playerRow {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .propBadge {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .averagesStats {
+    gap: 32px;
+  }
+
+  .avgValue {
+    font-size: 1.4rem;
+  }
+
+  .teamLogo {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .playerName {
+    font-size: 1.25rem;
+  }
+
+  .topRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .opponentInfo {
+    align-self: flex-start;
+  }
+
+  .playerRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .averagesStats {
+    gap: 24px;
+  }
+
+  .avgValue {
+    font-size: 1.2rem;
+  }
 }

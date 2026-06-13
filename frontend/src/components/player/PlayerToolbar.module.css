@@ -1,3 +1,4 @@
+/* playerToolbar.css */
 .toolbar {
   background: white;
   padding: 24px;
@@ -228,4 +229,45 @@
 .searchDropdownInfo {
   color: #888;
   font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 16px;
+  }
+
+  .toolbarGridWithLeague,
+  .toolbarGridWithoutLeague {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* All items span full width */
+  .withLeague_Player,
+  .withLeague_League,
+  .withLeague_OverUnder,
+  .withLeague_Line,
+  .withLeague_PropType,
+  .withoutLeague_Player,
+  .withoutLeague_OverUnder,
+  .withoutLeague_Line,
+  .withoutLeague_PropType,
+  .gridSearchBtn {
+    grid-column: unset;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .formInput,
+  .formSelect {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
 }

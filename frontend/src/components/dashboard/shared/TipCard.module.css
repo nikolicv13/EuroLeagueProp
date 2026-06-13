@@ -1,10 +1,10 @@
+/* tipCard.css */
 .ppCard {
-  max-width: 760px;
   width: 100%;
-  margin: 12px auto;
+  margin: 0;
   border-radius: 18px;
   overflow: hidden;
-  background: #ffffff; /* Keep body white for readability */
+  background: #ffffff;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   border: 1px solid rgba(15, 23, 42, 0.06);
   transition:
@@ -26,7 +26,6 @@
   gap: 16px;
   padding: 16px 18px;
 
-  /* 👇 Dynamic Team Background & Text */
   background: var(--team-bg);
   color: var(--team-text);
 }
@@ -72,7 +71,7 @@
 .ppPosition {
   font-size: 12px;
   font-weight: 700;
-  color: var(--team-muted); /* 👇 Dynamic Muted Text */
+  color: var(--team-muted);
 }
 
 /* Glassy Rating Pill */
@@ -84,7 +83,7 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
-  background: var(--team-surface); /* 👇 Transparent Team Surface */
+  background: var(--team-surface);
   border: 1px solid var(--team-muted);
   color: var(--team-text);
 }
@@ -119,14 +118,14 @@
 .ppMatchup {
   font-weight: 900;
   font-size: 13px;
-  color: var(--team-text); /* 👇 Dynamic Text */
+  color: var(--team-text);
 }
 
 .ppDate {
   margin-top: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--team-muted); /* 👇 Dynamic Muted Text */
+  color: var(--team-muted);
 }
 
 /* ==========================================
@@ -287,17 +286,354 @@
 .ppActionBtn:last-child {
   margin-right: 1rem; /* right margin on right button */
 }
+.ppRatingStar {
+  color: #ffd700 !important;
+}
 
-/* Responsive */
-@media (max-width: 900px) {
-  .ppStatsGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* ==========================================
+   TABLET: < 1024px
+   ========================================== */
+@media (max-width: 1024px) {
+  .ppCard {
+    max-width: 100%;
+    margin: 8px 0;
   }
+}
+
+/* ==========================================
+   TABLET: < 768px
+   ========================================== */
+@media (max-width: 768px) {
+  .ppCard {
+    border-radius: 14px;
+    margin: 6px 0;
+  }
+
+  /* Header stacks */
   .ppHeader {
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 14px 14px 0 0;
   }
+
+  .ppHeaderLeft {
+    width: 100%;
+  }
+
   .ppHeaderRight {
     text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ppPlayerRow {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ppPlayerName {
+    font-size: 15px;
+  }
+
+  .ppPosition {
+    font-size: 11px;
+  }
+
+  .ppRatingPill {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .ppPropPill {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  /* Hit rates: 3-col */
+  .ppSection {
+    margin: 10px 10px 0 10px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .ppStatsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ppStatBox {
+    padding: 8px 6px;
+    border-radius: 10px;
+  }
+
+  .ppStatValue {
+    font-size: 14px;
+  }
+
+  .ppStatLabel {
+    font-size: 10px;
+  }
+
+  .ppStatSub {
+    font-size: 11px;
+  }
+
+  /* Odds */
+  .ppOdds {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .ppOddsBtn {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  /* Actions: full width stack */
+  .ppActions {
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 10px 10px 10px;
+  }
+
+  .ppActionBtn {
+    max-width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .ppActionBtn:first-child {
+    margin-left: 0;
+  }
+
+  .ppActionBtn:last-child {
+    margin-right: 0;
+  }
+}
+
+/* ==========================================
+   SMALL MOBILE: < 480px
+   ========================================== */
+@media (max-width: 480px) {
+  .ppCard {
+    border-radius: 12px;
+    margin: 4px 0;
+  }
+
+  .ppHeader {
+    padding: 12px;
+    gap: 8px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ppAvatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ppPlayerName {
+    font-size: 14px;
+  }
+
+  .ppPosition {
+    font-size: 10px;
+  }
+
+  .ppRatingPill {
+    padding: 2px 6px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .ppPropPill {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .ppMatchup {
+    font-size: 12px;
+  }
+
+  .ppDate {
+    font-size: 11px;
+  }
+
+  .ppSection {
+    margin: 8px 8px 0 8px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .ppSectionTitle {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  /* Hit rates: 2-col on tiny screens */
+  .ppStatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .ppStatBox {
+    padding: 6px 4px;
+    border-radius: 8px;
+  }
+
+  .ppStatValue {
+    font-size: 13px;
+  }
+
+  .ppStatLabel {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .ppStatSub {
+    font-size: 10px;
+  }
+
+  .ppOdds {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .ppOddsBtn {
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+
+  .ppOddsVal {
+    font-size: 13px;
+  }
+
+  .ppActions {
+    padding: 0 8px 8px 8px;
+    gap: 6px;
+  }
+
+  .ppActionBtn {
+    padding: 9px 8px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+}
+@media (max-width: 768px) {
+  .ppCard {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .ppHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .ppHeaderLeft {
+    width: 100%;
+  }
+
+  .ppHeaderRight {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ppPlayerName {
+    font-size: 1.1rem;
+  }
+
+  .ppPlayerRow {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ppStatsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .ppOdds {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ppActions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ppActionBtn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+/* ==========================================
+   SMALL MOBILE
+   ========================================== */
+@media (max-width: 480px) {
+  .ppCard {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .ppPlayerName {
+    font-size: 1rem;
+  }
+
+  .ppAvatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ppStatsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ppStatBox {
+    padding: 8px 6px;
+  }
+
+  .ppStatValue {
+    font-size: 0.875rem;
+  }
+
+  .ppStatSub {
+    font-size: 0.625rem;
+  }
+
+  .ppRatingPill {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+
+  .ppPropPill {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+  }
+
+  .ppMatchup {
+    font-size: 0.8rem;
+  }
+
+  .ppDate {
+    font-size: 0.7rem;
+  }
+
+  .ppOddsBtn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
   }
 }

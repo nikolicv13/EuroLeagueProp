@@ -1,3 +1,4 @@
+/* similarPlayers.css */
 .similarPlayersContainer {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -62,4 +63,18 @@
 .similarPlayerGameStatUnder {
   font-weight: bold;
   color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .similarPlayersContainer {
+    padding: 12px;
+  }
+
+  .similarPlayersTitle {
+    font-size: 13px;
+  }
+
+  .similarPlayerName {
+    font-size: 12px;
+  }
 }

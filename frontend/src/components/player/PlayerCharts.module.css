@@ -1,3 +1,4 @@
+/* playerCharts.css */
 /* Hit Rates */
 .hitRatesContainer {
   display: flex;
@@ -168,4 +169,58 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   margin-bottom: 1.5rem;
   min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .hitRatesContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .chartContainer {
+    height: 22rem;
+    padding: 12px 8px;
+    border-radius: 10px;
+  }
+
+  .subChartContainer {
+    height: 14rem;
+    padding: 12px 8px;
+    border-radius: 10px;
+  }
+
+  .filterToggleGroup {
+    flex-wrap: wrap;
+  }
+
+  .filterButton,
+  .filterButtonActive {
+    padding: 8px 0;
+    font-size: 0.75rem;
+  }
+
+  .metricButtons {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .metricButton {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hitRatesContainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chartContainer {
+    height: 18rem;
+  }
+
+  .subChartContainer {
+    height: 12rem;
+  }
 }

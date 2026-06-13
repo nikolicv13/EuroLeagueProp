@@ -1,3 +1,4 @@
+/* gamePropsSidebar.css */
 .sidebar {
   width: 360px;
   min-width: 360px;
@@ -198,7 +199,50 @@
     width: 100%;
     min-width: 0;
     max-width: 800px;
-    margin-top: 0; /* Remove the 48px drop */
-    position: static; /* Disable sticky on mobile */
+    margin-top: 0;
+    position: static;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-top: 0;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .gamePreview {
+    padding: 10px 6px;
+  }
+
+  .teamLogo {
+    width: 24px;
+    height: 24px;
+  }
+
+  .teamAbbr {
+    font-size: 10px;
+  }
+
+  .propItem {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .playerImg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .oddBox {
+    padding: 3px 6px;
+    font-size: 10px;
+    min-width: 36px;
   }
 }

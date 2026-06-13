@@ -1,3 +1,4 @@
+/* defenseSection.css */
 .defenseFilterWrapper {
   display: flex;
   flex-wrap: wrap;
@@ -129,4 +130,41 @@
 }
 .defenseLegendColorGray {
   background: #888888;
+}
+@media (max-width: 768px) {
+  .defenseContainer {
+    padding: 16px;
+  }
+
+  .defenseTitle {
+    font-size: 0.875rem;
+  }
+
+  .defenseRow,
+  .defenseRowBottom {
+    gap: 6px;
+  }
+
+  .defenseBoxValue {
+    font-size: 1rem;
+  }
+
+  .defenseBoxLabel {
+    font-size: 0.75rem;
+  }
+
+  .defenseLegend {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .defenseRow,
+  .defenseRowBottom {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
 }

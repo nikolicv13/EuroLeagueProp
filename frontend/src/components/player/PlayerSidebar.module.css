@@ -1,3 +1,4 @@
+/* playerSidebar.css */
 .filterTitle {
   margin: 0;
   font-size: 14px;
@@ -310,5 +311,49 @@
     max-width: 800px;
     margin-top: 0; /* Remove the 48px drop */
     position: static; /* Disable sticky on mobile */
+  }
+}
+
+@media (max-width: 1024px) {
+  .filtersColumn {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-top: 0;
+    position: static;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .venueToggleGroup {
+    min-height: 36px;
+  }
+
+  .venueToggleButton,
+  .venueToggleButtonActive {
+    font-size: 0.75rem;
+    padding: 5px 0;
+  }
+
+  .filterInput {
+    font-size: 13px;
+    padding: 8px;
+    min-height: 36px;
+  }
+
+  .seasonDropdown {
+    font-size: 0.75rem;
+    padding: 6px 8px;
+  }
+
+  .resetMatchupBtn {
+    padding: 10px;
+    font-size: 11px;
+    min-height: 36px;
   }
 }

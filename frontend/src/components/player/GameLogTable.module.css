@@ -1,3 +1,4 @@
+/* gameLogTable.css */
 .gameLogContainer {
   margin-top: 40px;
   background: #fff;
@@ -105,4 +106,24 @@
   font-size: 13px;
   color: #666;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .gameLogContainer {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .gameLogTitle {
+    font-size: 15px;
+  }
+
+  .logPagination {
+    gap: 10px;
+  }
+
+  .logPageBtn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
 }
