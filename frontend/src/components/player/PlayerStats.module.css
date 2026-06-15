@@ -1,11 +1,14 @@
-/* playerStats.css */
+/* ==========================================
+   PAGE LAYOUT
+   ========================================== */
 .pageLayout {
   display: flex;
   width: 100%;
   max-width: 1600px;
-  gap: 64px;
+  gap: 32px;
   align-items: flex-start;
 }
+
 .pageWrapper {
   width: 100%;
   min-height: calc(100vh - 60px);
@@ -19,11 +22,11 @@
 .mainContent {
   flex: 1;
   min-width: 0;
-  max-width: 900px;
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
+
 .splitRow {
   display: grid;
   grid-template-columns: 3fr 2fr;
@@ -35,79 +38,263 @@
 .splitRow > * {
   min-width: 0;
 }
-.container {
-  flex: 1;
-  max-width: 1100px;
-  min-width: 0;
-  width: 100%;
-  padding-left: 2rem;
-  font-family: sans-serif;
+
+/* ==========================================
+   LEFT SIDEBAR
+   ========================================== */
+.leftSidebarContainer {
+  width: 360px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
-.noData {
-  padding: 2.5rem;
-  text-align: center;
+.leftSidebarContainer::-webkit-scrollbar {
+  width: 4px;
 }
 
-.title {
-  margin-bottom: 5px;
+.leftSidebarContainer::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
 }
 
-.subtitle {
-  color: #666;
-  margin-top: 0;
-  margin-bottom: 1.25rem;
+/* ==========================================
+   RIGHT SIDEBAR
+   ========================================== */
+.rightSidebarContainer {
+  width: 340px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
 }
 
-.filterTitle {
-  margin: 0;
+.rightSidebarContainer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.rightSidebarContainer::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+/* ==========================================
+   CLOSE BUTTONS
+   ========================================== */
+.sidebarCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  color: #888;
   font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.filterParagraph {
-  margin: 0;
-  margin-top: -12px;
-  color: var(--text-muted);
-  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+  margin-left: auto;
 }
 
+.sidebarCloseBtn:hover {
+  background: #f0f0f0;
+  color: #e94560;
+  border-color: #e94560;
+}
+
+/* Right sidebar close — hidden on desktop (no close needed) */
+.rightSidebarCloseBtn {
+  display: none;
+}
+
+/* ==========================================
+   PROPS REOPEN BUTTON (desktop only)
+   ========================================== */
+.propsReopenBtn {
+  position: fixed;
+  left: 16px;
+  bottom: 24px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #3777af;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(55, 119, 175, 0.4);
+  transition: all 0.2s;
+}
+
+.propsReopenBtn:hover {
+  background: #2d6a9e;
+  transform: translateY(-2px);
+}
+
+.propsReopenBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==========================================
+   MOBILE PROPS BUTTON (small inline button)
+   ========================================== */
+.propsToggleBtn {
+  display: none;
+}
+
+/* ==========================================
+   FILTERS FAB
+   ========================================== */
+.filtersFab {
+  display: none;
+}
+
+/* ==========================================
+   OVERLAY
+   ========================================== */
+.sidebarOverlay {
+  display: none;
+}
+
+/* ==========================================
+   TABLET + MOBILE: < 1200px
+   ========================================== */
 @media (max-width: 1200px) {
   .pageLayout {
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
+    gap: 0;
   }
 
-  .mainContent {
-    max-width: 100%;
-    width: 100%;
-  }
-  .splitRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 1024px) {
-  .pageLayout {
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    max-width: 100%;
-  }
-
-  .mainContent {
-    max-width: 100%;
-    width: 100%;
-  }
-
-  .splitRow {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .pageWrapper {
+  /* Left sidebar → fixed drawer, off-screen by default */
+  .leftSidebarContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 999;
+    width: 360px;
+    max-width: 85vw;
+    max-height: 100vh;
     padding: 16px;
+    background: white;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    border-radius: 0 12px 12px 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+  }
+
+  .leftSidebarContainer.panelOpen {
+    transform: translateX(0);
+  }
+
+  /* Right sidebar → fixed drawer, off-screen by default */
+  .rightSidebarContainer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    width: 340px;
+    max-width: 85vw;
+    height: 100vh;
+    overflow-y: visible;
+    padding: 16px;
+    background: white;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    border-radius: 12px 0 0 12px;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .rightSidebarContainer.drawerOpen {
+    transform: translateX(0);
+  }
+
+  /* Left sidebar close also bigger */
+  .sidebarCloseBtn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  /* Overlay */
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 998;
+  }
+
+  /* Hide desktop reopen button */
+  .propsReopenBtn {
+    display: none;
+  }
+
+  /* Show small props toggle */
+  .propsToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+  }
+
+  .propsToggleBtn:hover {
+    background: #f4f6f8;
+    border-color: #3777af;
+    color: #3777af;
+  }
+
+  /* Show filters FAB */
+  .filtersFab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    padding: 14px 24px;
+    background: #3777af;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(55, 119, 175, 0.4);
+    transition: all 0.2s;
+  }
+
+  .filtersFab:hover {
+    background: #2d6a9e;
+    transform: translateY(-2px);
+  }
+
+  .filtersFab svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -121,5 +308,46 @@
 
   .mainContent {
     gap: 20px;
+  }
+
+  .splitRow {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .leftSidebarContainer {
+    width: 320px;
+    max-width: 90vw;
+    padding: 12px;
+  }
+
+  .rightSidebarContainer {
+    width: 320px;
+    max-width: 90vw;
+    padding: 12px;
+  }
+
+  .filtersFab {
+    bottom: 16px;
+    right: 16px;
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+}
+
+/* ==========================================
+   DESKTOP ONLY — hide mobile elements
+   ========================================== */
+@media (min-width: 1201px) {
+  .filtersFab {
+    display: none !important;
+  }
+
+  .propsToggleBtn {
+    display: none !important;
+  }
+
+  .rightSidebarCloseBtn {
+    display: none !important;
   }
 }

@@ -1,6 +1,7 @@
 /* tipCard.css */
 .ppCard {
   width: 100%;
+  max-width: 760px;
   margin: 0;
   border-radius: 18px;
   overflow: hidden;
@@ -309,7 +310,6 @@
     margin: 6px 0;
   }
 
-  /* Header stacks */
   .ppHeader {
     flex-direction: column;
     align-items: flex-start;
@@ -354,7 +354,6 @@
     padding: 5px 8px;
   }
 
-  /* Hit rates: 3-col */
   .ppSection {
     margin: 10px 10px 0 10px;
     padding: 10px;
@@ -383,7 +382,6 @@
     font-size: 11px;
   }
 
-  /* Odds */
   .ppOdds {
     padding: 10px;
     gap: 8px;
@@ -394,7 +392,6 @@
     border-radius: 10px;
   }
 
-  /* Actions: full width stack */
   .ppActions {
     flex-direction: column;
     gap: 8px;
@@ -476,7 +473,6 @@
     margin-bottom: 8px;
   }
 
-  /* Hit rates: 2-col on tiny screens */
   .ppStatsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
@@ -523,117 +519,5 @@
     padding: 9px 8px;
     font-size: 13px;
     border-radius: 8px;
-  }
-}
-@media (max-width: 768px) {
-  .ppCard {
-    padding: 16px;
-    border-radius: 10px;
-  }
-
-  .ppHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .ppHeaderLeft {
-    width: 100%;
-  }
-
-  .ppHeaderRight {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .ppPlayerName {
-    font-size: 1.1rem;
-  }
-
-  .ppPlayerRow {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .ppStatsGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-
-  .ppOdds {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .ppActions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .ppActionBtn {
-    width: 100%;
-    text-align: center;
-    justify-content: center;
-  }
-}
-
-/* ==========================================
-   SMALL MOBILE
-   ========================================== */
-@media (max-width: 480px) {
-  .ppCard {
-    padding: 12px;
-    border-radius: 10px;
-  }
-
-  .ppPlayerName {
-    font-size: 1rem;
-  }
-
-  .ppAvatar {
-    width: 36px;
-    height: 36px;
-  }
-
-  .ppStatsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .ppStatBox {
-    padding: 8px 6px;
-  }
-
-  .ppStatValue {
-    font-size: 0.875rem;
-  }
-
-  .ppStatSub {
-    font-size: 0.625rem;
-  }
-
-  .ppRatingPill {
-    font-size: 0.7rem;
-    padding: 3px 8px;
-  }
-
-  .ppPropPill {
-    font-size: 0.75rem;
-    padding: 4px 10px;
-  }
-
-  .ppMatchup {
-    font-size: 0.8rem;
-  }
-
-  .ppDate {
-    font-size: 0.7rem;
-  }
-
-  .ppOddsBtn {
-    padding: 6px 10px;
-    font-size: 0.75rem;
   }
 }

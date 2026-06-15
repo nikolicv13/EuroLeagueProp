@@ -109,14 +109,11 @@ export default function PlayerStats() {
     tip.game_id || "",
   );
   const [sidebarPropFilter, setSidebarPropFilter] = useState<string>("all");
-
   const [searchQuery, setSearchQuery] = useState(tip.player || "");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-
   const [pendingTipData, setPendingTipData] = useState<Tip | null>(null);
-
   const [oppPlayerQuery, setOppPlayerQuery] = useState(
     searchParams.get("oppPlayerName") || "",
   );
@@ -171,6 +168,8 @@ export default function PlayerStats() {
         }
       : null,
   );
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // --- HANDLERS ---
   const handleTeammateSearch = async (
@@ -613,6 +612,33 @@ export default function PlayerStats() {
     })();
   }, [tip.opponent_team_id, tip.position, tip.market, tip.line]);
 
+  // Auto-close left sidebar when screen shrinks
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 1200px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) {
+        setLeftSidebarOpen(false);
+        setMobileFiltersOpen(false);
+      }
+    };
+    handler(mql); // Check immediately
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  // Lock body scroll when a drawer is open
+  useEffect(() => {
+    const isOpen = leftSidebarOpen || mobileFiltersOpen;
+    document.body.style.overflow = isOpen ? "" : "";
+    // On mobile, lock scroll when a drawer overlays
+    if (window.innerWidth <= 1200 && isOpen) {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [leftSidebarOpen, mobileFiltersOpen]);
+
   // --- MEMOIZED DATA ---
   const venueFilteredStats = useMemo(
     () =>
@@ -784,18 +810,70 @@ export default function PlayerStats() {
   // --- RENDER ---
   return (
     <div className={styles.pageWrapper}>
-      <div className={styles.pageLayout}>
-        <GamePropsSidebar
-          availableGames={availableGames}
-          selectedGameId={selectedGameId}
-          setSelectedGameId={setSelectedGameId}
-          propFilter={sidebarPropFilter}
-          setPropFilter={setSidebarPropFilter}
-          groupedTips={groupedSidebarTips}
-          currentTip={tip}
-          onTipClick={handleSidebarClick}
+      {/* Overlay for left sidebar drawer OR mobile filters drawer */}
+      {(leftSidebarOpen || mobileFiltersOpen) && (
+        <div
+          className={styles.sidebarOverlay}
+          onClick={() => {
+            setLeftSidebarOpen(false);
+            setMobileFiltersOpen(false);
+          }}
         />
+      )}
+
+      <div className={styles.pageLayout}>
+        {/* ===== LEFT SIDEBAR (Props) — user controlled ===== */}
+        {leftSidebarOpen && (
+          <div className={`${styles.leftSidebarContainer} ${styles.panelOpen}`}>
+            <GamePropsSidebar
+              availableGames={availableGames}
+              selectedGameId={selectedGameId}
+              setSelectedGameId={setSelectedGameId}
+              propFilter={sidebarPropFilter}
+              setPropFilter={setSidebarPropFilter}
+              groupedTips={groupedSidebarTips}
+              currentTip={tip}
+              onTipClick={handleSidebarClick}
+              onClose={() => setLeftSidebarOpen(false)}
+            />
+          </div>
+        )}
+
+        {/* Props reopen button (desktop only, when collapsed) */}
+        {!leftSidebarOpen && (
+          <button
+            className={styles.propsReopenBtn}
+            onClick={() => setLeftSidebarOpen(true)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            Props
+          </button>
+        )}
+
+        {/* ===== MAIN CONTENT ===== */}
         <div className={styles.mainContent}>
+          {/* Mobile toggle row (only for left sidebar) */}
+          <div className={styles.mobileSidebarToggles}>
+            <button
+              onClick={() => setLeftSidebarOpen(true)}
+              className={styles.propsToggleBtn}
+            >
+              ◀ Props
+            </button>
+          </div>
+
           <PlayerToolbar
             searchQuery={searchQuery}
             handleSearchChange={handleSearchChange}
@@ -853,46 +931,70 @@ export default function PlayerStats() {
             fullSeasonChartData={fullSeasonChartData}
             logPage={logPage}
             setLogPage={setLogPage}
-            selectedSeason={
-              selectedOppPlayer?.id ? "All Seasons" : selectedSeason
-            }
+            selectedSeason={selectedSeason}
             phaseFilter={phaseFilter}
             venueFilter={venueFilter}
           />
         </div>
-        <PlayerSidebar
-          venueFilter={venueFilter}
-          handleVenueChange={handleVenueChange}
-          phaseFilter={phaseFilter}
-          handlePhaseChange={handlePhaseChange}
-          selectedSeason={selectedSeason}
-          setSelectedSeason={setSelectedSeason}
-          oppPlayerQuery={oppPlayerQuery}
-          handleOppSearchChange={handleOppSearchChange}
-          oppPlayerResults={oppPlayerResults}
-          showOppDropdown={showOppDropdown}
-          setShowOppDropdown={setShowOppDropdown}
-          selectedOppPlayer={selectedOppPlayer}
-          handleSelectOppPlayer={handleSelectOppPlayer}
-          clearOppPlayer={clearOppPlayer}
-          withQuery={withQuery}
-          handleTeammateSearch={handleTeammateSearch}
-          withResults={withResults}
-          showWithDropdown={showWithDropdown}
-          setShowWithDropdown={setShowWithDropdown}
-          selectedWith={selectedWith}
-          handleSelectTeammate={handleSelectTeammate}
-          clearTeammate={clearTeammate}
-          withoutQuery={withoutQuery}
-          withoutResults={withoutResults}
-          showWithoutDropdown={showWithoutDropdown}
-          setShowWithoutDropdown={setShowWithoutDropdown}
-          selectedWithout={selectedWithout}
-          selectedLeagues={selectedLeagues}
-          handleLeagueToggle={handleLeagueToggle}
-          resetPlayerFilters={resetPlayerFilters}
-        />
+
+        {/* ===== RIGHT SIDEBAR (Filters) — always on desktop ===== */}
+        <div
+          className={`${styles.rightSidebarContainer} ${mobileFiltersOpen ? styles.drawerOpen : ""}`}
+        >
+          <PlayerSidebar
+            venueFilter={venueFilter}
+            handleVenueChange={handleVenueChange}
+            phaseFilter={phaseFilter}
+            handlePhaseChange={handlePhaseChange}
+            selectedSeason={selectedSeason}
+            setSelectedSeason={setSelectedSeason}
+            oppPlayerQuery={oppPlayerQuery}
+            handleOppSearchChange={handleOppSearchChange}
+            oppPlayerResults={oppPlayerResults}
+            showOppDropdown={showOppDropdown}
+            setShowOppDropdown={setShowOppDropdown}
+            selectedOppPlayer={selectedOppPlayer}
+            handleSelectOppPlayer={handleSelectOppPlayer}
+            clearOppPlayer={clearOppPlayer}
+            withQuery={withQuery}
+            handleTeammateSearch={handleTeammateSearch}
+            withResults={withResults}
+            showWithDropdown={showWithDropdown}
+            setShowWithDropdown={setShowWithDropdown}
+            selectedWith={selectedWith}
+            handleSelectTeammate={handleSelectTeammate}
+            clearTeammate={clearTeammate}
+            withoutQuery={withoutQuery}
+            withoutResults={withoutResults}
+            showWithoutDropdown={showWithoutDropdown}
+            setShowWithoutDropdown={setShowWithoutDropdown}
+            selectedWithout={selectedWithout}
+            selectedLeagues={selectedLeagues}
+            handleLeagueToggle={handleLeagueToggle}
+            resetPlayerFilters={resetPlayerFilters}
+          />
+        </div>
       </div>
+
+      {/* Filters FAB (CSS hides it on desktop) */}
+      <button
+        className={styles.filtersFab}
+        onClick={() => setMobileFiltersOpen(true)}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="8" y1="12" x2="20" y2="12" />
+          <line x1="12" y1="18" x2="20" y2="18" />
+        </svg>
+        Filters
+      </button>
     </div>
   );
 }

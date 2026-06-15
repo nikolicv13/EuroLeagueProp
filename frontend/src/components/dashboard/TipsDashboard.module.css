@@ -67,12 +67,11 @@
   border-right: none;
 }
 
-/* The row containing Sidebar + TipsList */
 .dashboardContainer {
   display: flex;
   width: 100%;
   max-width: 1440px;
-  gap: 48px;
+  gap: 96px;
   align-items: flex-start;
 }
 /* ==========================================

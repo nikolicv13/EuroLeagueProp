@@ -24,6 +24,7 @@ interface GamePropsSidebarProps {
   groupedTips: GroupedProp[];
   currentTip: CurrentTip;
   onTipClick: (tip: Tip) => void;
+  onClose?: () => void;
 }
 
 export default function GamePropsSidebar({
@@ -35,6 +36,7 @@ export default function GamePropsSidebar({
   groupedTips,
   currentTip,
   onTipClick,
+  onClose,
 }: GamePropsSidebarProps) {
   const currentGame = availableGames.find((g) => g.game_id === selectedGameId);
 
@@ -76,6 +78,18 @@ export default function GamePropsSidebar({
 
   return (
     <div className={styles.sidebar}>
+      <div className={styles.sidebarHeader}>
+        <span className={styles.sidebarHeaderTitle}>Props</span>
+        {onClose && (
+          <button
+            className={styles.sidebarCloseBtn}
+            onClick={onClose}
+            title="Close props"
+          >
+            ✕
+          </button>
+        )}
+      </div>
       {/* Top Filters */}
       <div className={styles.filterRow}>
         <select
