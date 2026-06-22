@@ -4,9 +4,9 @@ import pool from "./db.js"; // This now securely connects to Supabase!
 import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
-import dotenv from "dotenv"; // 👈 1. Import dotenv
-
-dotenv.config(); // 👈 2. Load your .env variables
+import dotenv from "dotenv";
+import { authMiddleware } from "./middleware/authMiddleware.js";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +71,65 @@ function getMarketValue(game, market) {
       return 0;
   }
 }
+
+// ==========================================
+// AUTH: Get current user profile
+// ==========================================
+app.get("/api/auth/me", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, email, first_name, last_name, tier, created_at FROM users WHERE id = $1",
+      [req.user.id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to fetch profile", details: error.message });
+  }
+});
+
+// ==========================================
+// AUTH: Update profile
+// ==========================================
+app.put("/api/auth/profile", authMiddleware, async (req, res) => {
+  try {
+    const { first_name, last_name, username } = req.body;
+
+    // Check if username is already taken (if changing)
+    if (username) {
+      const existing = await pool.query(
+        "SELECT id FROM users WHERE username = $1 AND id != $2",
+        [username, req.user.id],
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: "Username is already taken" });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           username = COALESCE($3, username),
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING id, email, username, first_name, last_name, tier`,
+      [first_name, last_name, username, req.user.id],
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to update profile", details: error.message });
+  }
+});
 
 // ==========================================
 // ROUTE 1: Test Route (keep this from before)

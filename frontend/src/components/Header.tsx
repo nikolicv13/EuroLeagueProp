@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import styles from "./Header.module.css";
+import { useAuth } from "../context/auth-context";
+import ProfileDropdown from "./ProfileDropdown";
 
 export default function Header() {
   const [hidden, setHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading } = useAuth();
 
   // Scroll-hide behavior (your existing code)
   useEffect(() => {
@@ -113,18 +116,28 @@ export default function Header() {
 
         {/* Right Section: Auth Buttons (Desktop) */}
         <div className={`${styles.headerSection} ${styles.headerRight}`}>
-          <NavLink
-            to="/login"
-            className={`${styles.button} ${styles.buttonSecondary}`}
-          >
-            Login
-          </NavLink>
-          <NavLink
-            to="/signup"
-            className={`${styles.button} ${styles.buttonPrimary}`}
-          >
-            Sign Up
-          </NavLink>
+          {!loading && (
+            <>
+              {user ? (
+                <ProfileDropdown />
+              ) : (
+                <>
+                  <NavLink
+                    to="/login"
+                    className={`${styles.button} ${styles.buttonSecondary}`}
+                  >
+                    Login
+                  </NavLink>
+                  <NavLink
+                    to="/signup"
+                    className={`${styles.button} ${styles.buttonPrimary}`}
+                  >
+                    Sign Up
+                  </NavLink>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Hamburger: Mobile Only */}
@@ -219,6 +232,17 @@ export default function Header() {
         >
           Contact
         </NavLink>
+        {user && (
+          <NavLink
+            to="/account"
+            onClick={closeMenu}
+            className={({ isActive }) =>
+              `${styles.mobileNavLink} ${isActive ? styles.mobileNavLinkActive : ""}`
+            }
+          >
+            Account Settings
+          </NavLink>
+        )}
       </nav>
     </header>
   );
