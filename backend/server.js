@@ -23,7 +23,7 @@ app.use(
 );
 app.use(express.json());
 app.set("pool", pool);
-const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "false";
+const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "true";
 
 function getMarketValue(game, market) {
   const pts = parseFloat(game.points) || 0;
@@ -208,7 +208,7 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
     const limitParam = req.query.limit;
     const limit = limitParam !== undefined ? parseInt(limitParam, 10) : 50;
     const opponent = req.query.opponent;
-    const seasonCode = req.query.season;
+    const seasonCode = req.query.season || "E2026";
     const gameDate = req.query.date;
     const opposingPlayerId = req.query.oppPlayer;
     const withTeammateId = req.query.withTeammate;
@@ -927,7 +927,7 @@ app.get(
           JOIN player_season_stats pss 
             ON ps.player_id = pss.player_id 
             AND ps.team_id = pss.team_id 
-            AND pss.season_code = 'E2025'
+            AND pss.season_code = $4
           WHERE ps.game_rn <= 2
             AND ${stat.avg} >= $3 * 0.6
             AND ${stat.avg} <= $3 * 1.4
