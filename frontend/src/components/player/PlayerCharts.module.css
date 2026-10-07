@@ -7,14 +7,6 @@
   width: 100%;
 }
 
-.hitRateBox {
-  text-align: center;
-  background: #f0f0f0;
-  padding: 10px 15px;
-  border-radius: 8px;
-  min-width: 70px;
-}
-
 .hitRateLabel {
   font-size: 0.75rem;
   color: #666;

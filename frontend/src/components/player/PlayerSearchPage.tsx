@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { fetchPlayerSearch } from "../../api/api";
+
+import TierGate from "../TierGate";
 import type { PlayerSearchResult } from "../../api/types";
 import PlayerToolbar from "./PlayerToolbar";
 import styles from "./PlayerStats.module.css"; // Reusing the wrapper styles
@@ -88,25 +90,26 @@ export default function PlayerSearchPage() {
         >
           Player Prop Search
         </h1>
-
-        <PlayerToolbar
-          searchQuery={searchQuery}
-          handleSearchChange={handleSearchChange}
-          searchResults={searchResults}
-          showDropdown={showDropdown}
-          setShowDropdown={setShowDropdown}
-          handleSelectPlayer={handleSelectPlayer}
-          inputLeague={inputLeague}
-          setInputLeague={setInputLeague}
-          inputOverUnder={inputOverUnder}
-          setInputOverUnder={setInputOverUnder}
-          inputLine={inputLine}
-          setInputLine={setInputLine}
-          inputMarket={inputMarket}
-          setInputMarket={setInputMarket}
-          handleSearch={handleSearch}
-          showLeagueFilter={true}
-        />
+        <TierGate requiredTier="pro" featureName="Player Search">
+          <PlayerToolbar
+            searchQuery={searchQuery}
+            handleSearchChange={handleSearchChange}
+            searchResults={searchResults}
+            showDropdown={showDropdown}
+            setShowDropdown={setShowDropdown}
+            handleSelectPlayer={handleSelectPlayer}
+            inputLeague={inputLeague}
+            setInputLeague={setInputLeague}
+            inputOverUnder={inputOverUnder}
+            setInputOverUnder={setInputOverUnder}
+            inputLine={inputLine}
+            setInputLine={setInputLine}
+            inputMarket={inputMarket}
+            setInputMarket={setInputMarket}
+            handleSearch={handleSearch}
+            showLeagueFilter={true}
+          />
+        </TierGate>
       </div>
     </div>
   );

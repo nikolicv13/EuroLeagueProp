@@ -1,7 +1,7 @@
 import React from "react";
 import type { PlayerSearchResult } from "../../api/types";
 import styles from "./PlayerSidebar.module.css";
-
+import TierGate from "../TierGate";
 // Define the shape of the selected teammate/opponent objects
 interface SelectedPlayer {
   id: string;
@@ -139,6 +139,7 @@ export default function PlayerSidebar(props: PlayerSidebarProps) {
           value={props.selectedSeason}
           onChange={(e) => props.setSelectedSeason(e.target.value)}
         >
+          <option value="E2026">2026/27</option>
           <option value="E2025">2025/26</option>
           <option value="E2024">2024/25</option>
           <option value="E2023">2023/24</option>
@@ -150,50 +151,56 @@ export default function PlayerSidebar(props: PlayerSidebarProps) {
           ========================================== */}
       <div className={styles.filterGroup} style={{ marginTop: "10px" }}>
         <label className={styles.filterLabel}>Filter by Opposing Player</label>
-        <div className={styles.inputWithClear}>
-          <input
-            type="text"
-            value={props.oppPlayerQuery}
-            onChange={props.handleOppSearchChange}
-            onBlur={() =>
-              setTimeout(() => props.setShowOppDropdown(false), 200)
-            }
-            onFocus={() =>
-              props.oppPlayerResults.length > 0 &&
-              props.setShowOppDropdown(true)
-            }
-            placeholder="Search opponent..."
-            className={`${styles.filterInput} ${props.selectedOppPlayer ? styles.filterInputActiveOpp : ""}`}
-          />
-          {props.selectedOppPlayer && (
-            <button
-              onClick={props.clearOppPlayer}
-              className={styles.clearInputBtn}
-              title="Clear opponent filter"
-            >
-              ✕
-            </button>
-          )}
+        <TierGate
+          requiredTier="pro"
+          featureName="Opposing Player Filter"
+          compact
+        >
+          <div className={styles.inputWithClear}>
+            <input
+              type="text"
+              value={props.oppPlayerQuery}
+              onChange={props.handleOppSearchChange}
+              onBlur={() =>
+                setTimeout(() => props.setShowOppDropdown(false), 200)
+              }
+              onFocus={() =>
+                props.oppPlayerResults.length > 0 &&
+                props.setShowOppDropdown(true)
+              }
+              placeholder="Search opponent..."
+              className={`${styles.filterInput} ${props.selectedOppPlayer ? styles.filterInputActiveOpp : ""}`}
+            />
+            {props.selectedOppPlayer && (
+              <button
+                onClick={props.clearOppPlayer}
+                className={styles.clearInputBtn}
+                title="Clear opponent filter"
+              >
+                ✕
+              </button>
+            )}
 
-          {props.showOppDropdown && props.oppPlayerResults.length > 0 && (
-            <ul className={styles.searchDropdown}>
-              {props.oppPlayerResults.map((p, i) => (
-                <li
-                  key={`${p.player_id}-${i}`}
-                  onMouseDown={() => props.handleSelectOppPlayer(p)}
-                  className={styles.searchDropdownItem}
-                >
-                  <span className={styles.searchDropdownName}>
-                    {p.player_name}
-                  </span>
-                  <span className={styles.searchDropdownInfo}>
-                    {p.team_id} | {p.position}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {props.showOppDropdown && props.oppPlayerResults.length > 0 && (
+              <ul className={styles.searchDropdown}>
+                {props.oppPlayerResults.map((p, i) => (
+                  <li
+                    key={`${p.player_id}-${i}`}
+                    onMouseDown={() => props.handleSelectOppPlayer(p)}
+                    className={styles.searchDropdownItem}
+                  >
+                    <span className={styles.searchDropdownName}>
+                      {p.player_name}
+                    </span>
+                    <span className={styles.searchDropdownInfo}>
+                      {p.team_id} | {p.position}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </TierGate>
       </div>
 
       {/* ==========================================
@@ -210,6 +217,7 @@ export default function PlayerSidebar(props: PlayerSidebarProps) {
         {/* WITH Teammate */}
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>With Teammate</label>
+
           <div className={styles.inputWithClear}>
             <input
               type="text"

@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import pool from "./db.js"; // This now securely connects to Supabase!
-import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import dotenv from "dotenv";
-import { authMiddleware } from "./middleware/authMiddleware.js";
+import { authMiddleware, optionalAuth } from "./middleware/authMiddleware.js";
+import { tierMiddleware } from "./middleware/tierMiddleware.js";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,8 +22,8 @@ app.use(
   }),
 );
 app.use(express.json());
-
-const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "true";
+app.set("pool", pool);
+const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "false";
 
 function getMarketValue(game, market) {
   const pts = parseFloat(game.points) || 0;
@@ -152,19 +152,23 @@ app.get("/api/test", async (req, res) => {
 // ROUTE 2: Search Players
 // ==========================================
 // Usage: http://localhost:3001/api/players/search?q=larkin
-app.get("/api/players/search", async (req, res) => {
-  try {
-    // Get the search word from the URL (?q=...)
-    const searchQuery = req.query.q;
+app.get(
+  "/api/players/search",
+  authMiddleware,
+  tierMiddleware("pro"),
+  async (req, res) => {
+    try {
+      // Get the search word from the URL (?q=...)
+      const searchQuery = req.query.q;
 
-    if (!searchQuery) {
-      return res
-        .status(400)
-        .json({ error: "Please provide a search term using ?q=name" });
-    }
+      if (!searchQuery) {
+        return res
+          .status(400)
+          .json({ error: "Please provide a search term using ?q=name" });
+      }
 
-    const result = await pool.query(
-      `SELECT 
+      const result = await pool.query(
+        `SELECT 
         p.player_id, 
         MAX(p.player_name) as player_name, 
         MAX(p.position) as position, 
@@ -182,21 +186,23 @@ app.get("/api/players/search", async (req, res) => {
       GROUP BY p.player_id
       ORDER BY MAX(ps.points_per_game) DESC NULLS LAST
       LIMIT 15`,
-      [`%${searchQuery}%`],
-    );
+        [`%${searchQuery}%`],
+      );
 
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: "Search failed", details: error.message });
-  }
-});
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Search failed", details: error.message });
+    }
+  },
+);
 
 // ==========================================
 // ROUTE 3: Get Player Game Stats (Updated)
 // ==========================================
 // Usage: http://localhost:3001/api/players/P000229/stats?limit=5&opponent=MAD
-app.get("/api/players/:id/stats", async (req, res) => {
+app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
   try {
+    const userTier = req.userTier || "pro"; // default to pro if not logged in (off-season)
     const playerId = req.params.id;
     // Ensure limit is a number, default to 10
     const limitParam = req.query.limit;
@@ -208,9 +214,18 @@ app.get("/api/players/:id/stats", async (req, res) => {
     const withTeammateId = req.query.withTeammate;
     const withoutTeammateId = req.query.withoutTeammate;
 
-    // 1. FIX: Define currentDate (use today if no date is provided)
     const currentDate = gameDate || new Date().toISOString().split("T")[0];
-
+    if (userTier === "free") {
+      // Remove these filters — they're pro-only
+      if (withTeammateId || withoutTeammateId || opposingPlayerId) {
+        return res.status(403).json({
+          error: "upgrade_required",
+          message: "Teammate and opponent filters require a Pro subscription",
+          currentTier: "free",
+          requiredTier: "pro",
+        });
+      }
+    }
     let query = `
        SELECT 
         bs.game_id,
@@ -825,6 +840,8 @@ app.get("/api/players/:id/info", async (req, res) => {
 // ==========================================
 app.get(
   "/api/similar-players/:opponentId/:position/:market",
+  authMiddleware,
+  tierMiddleware("pro"),
   async (req, res) => {
     try {
       const { opponentId, position, market } = req.params;
@@ -961,7 +978,7 @@ app.get("/api/players/search", async (req, res) => {
 // ==========================================
 // ROUTE 10: Fetch Expanded Props from BrazilBet
 // ==========================================
-app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
+app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
   const { leagueId } = req.params;
   // ===== MOCK MODE =====
   if (USE_MOCK_ODDS) {
@@ -1413,8 +1430,19 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
       }
     }
 
-    tips.sort((a, b) => b.score - a.score);
-    res.json(tips);
+    // Filter tips for free users — only show the daily game
+    let filteredTips = tips;
+    if (req.userTier === "free") {
+      const dailyGameId = await getDailyGame(leagueId);
+      if (dailyGameId) {
+        filteredTips = tips.filter(
+          (t) => String(t.game_id) === String(dailyGameId),
+        );
+      }
+    }
+
+    filteredTips.sort((a, b) => b.score - a.score);
+    res.json(filteredTips);
   } catch (error) {
     console.error(error);
     res
@@ -1422,6 +1450,60 @@ app.get("/api/odds/brazilbet/:leagueId", async (req, res) => {
       .json({ error: "Failed to process odds", details: error.message });
   }
 });
+
+// ==========================================
+// HELPER: Get or pick today's daily game for free users
+// ==========================================
+async function getDailyGame(leagueId) {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Check if we already picked today's game
+  const existing = await pool.query(
+    "SELECT value FROM site_settings WHERE key = $1",
+    [`daily_game_${today}`],
+  );
+
+  if (existing.rows.length > 0) {
+    return existing.rows[0].value; // game_id
+  }
+
+  // Pick the first game chronologically from today's games
+  const games = await pool.query(
+    `SELECT game_id FROM games 
+     WHERE date = $1 
+     ORDER BY time ASC 
+     LIMIT 1`,
+    [today],
+  );
+
+  // If no games today, pick the next upcoming game
+  let gameId;
+  if (games.rows.length > 0) {
+    gameId = games.rows[0].game_id;
+  } else {
+    const nextGame = await pool.query(
+      `SELECT game_id FROM games 
+       WHERE date > $1 
+       ORDER BY date ASC, time ASC 
+       LIMIT 1`,
+      [today],
+    );
+    gameId = nextGame.rows[0]?.game_id || null;
+  }
+
+  if (gameId) {
+    // Store it (upsert so it doesn't fail if race condition)
+    await pool.query(
+      `INSERT INTO site_settings (key, value, updated_at) 
+       VALUES ($1, $2, NOW()) 
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+      [`daily_game_${today}`, gameId],
+    );
+  }
+
+  return gameId;
+}
+
 // ==========================================
 // START THE SERVER
 // ==========================================

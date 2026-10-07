@@ -1,11 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL, // Project URL
-  process.env.SUPABASE_SERVICE_KEY, // service_role key (from Supabase dashboard)
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+let supabase = null;
+
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+} else {
+  console.warn(
+    "⚠️  SUPABASE_URL or SUPABASE_SERVICE_KEY missing — auth routes will not work",
+  );
+}
 
 export async function authMiddleware(req, res, next) {
+  if (!supabase) {
+    return res.status(500).json({ error: "Auth not configured on server" });
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -36,6 +48,10 @@ export async function authMiddleware(req, res, next) {
 }
 
 export async function optionalAuth(req, res, next) {
+  if (!supabase) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -47,7 +63,9 @@ export async function optionalAuth(req, res, next) {
       if (user) {
         req.user = { id: user.id, email: user.email };
       }
-    } catch {}
+    } catch {
+      // Continue without user
+    }
   }
   next();
 }

@@ -1,0 +1,116 @@
+.compactLocked {
+  position: relative;
+  width: 100%;
+}
+
+.compactContent {
+  opacity: 0.2;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(1);
+}
+
+.compactOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 0 10px;
+}
+
+.compactLock {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.compactText {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  flex: 1;
+}
+
+.compactBtn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #f59e0b;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.compactBtn:hover {
+  background: #d97706;
+}
+
+/* ==========================================
+   DEFAULT MODE (full overlay)
+   ========================================== */
+.lockedContainer {
+  position: relative;
+}
+
+.lockedContent {
+  opacity: 0.15;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(1);
+}
+
+.lockedOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.lockIcon {
+  font-size: 28px;
+}
+
+.lockTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #333;
+}
+
+.lockDesc {
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
+
+.upgradeBtn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #f59e0b;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.upgradeBtn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
