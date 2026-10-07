@@ -32,7 +32,7 @@ interface DashboardSidebarProps {
 
 export default function DashboardSidebar(props: DashboardSidebarProps) {
   const getLeagueLogo = (id: string) => {
-    if (id === "631799") return "euroleague";
+    if (id === "571881") return "euroleague";
     if (id === "eurocup") return "eurocup";
     if (id === "nba") return "nba";
     return "placeholder";
@@ -61,7 +61,7 @@ export default function DashboardSidebar(props: DashboardSidebarProps) {
               value={props.oddsLeagueId}
               onChange={(e) => props.setOddsLeagueId(e.target.value)}
             >
-              <option value="631799">Euroleague</option>
+              <option value="571881">Euroleague</option>
               <option value="eurocup" disabled>
                 Eurocup (Coming Soon)
               </option>

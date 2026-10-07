@@ -262,7 +262,7 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
               "Opponent";
             const pos = tip.position || "UNK";
             const teamId = tip.team_id || "UNK";
-            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=E2025&leagueId=631799`;
+            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=E2026&leagueId=631799`;
             navigate(url, { state: tip });
           }}
         >

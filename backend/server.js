@@ -25,6 +25,24 @@ app.use(express.json());
 app.set("pool", pool);
 const USE_MOCK_ODDS = process.env.USE_MOCK_ODDS === "true";
 
+// ==========================================
+// HELPER: Get Current Euroleague Season Code
+// ==========================================
+function getCurrentSeasonCode() {
+  const now = new Date();
+  const month = now.getMonth(); // 0 = Jan, 9 = Oct
+  const year = now.getFullYear();
+
+  // Euroleague starts in October.
+  // If it's Oct-Dec, the season ends next year (e.g., Oct 2025 -> E2026)
+  // If it's Jan-Sept, the season ends this year (e.g., Feb 2026 -> E2026)
+  if (month >= 9) {
+    // October or later
+    return `E${year + 1}`;
+  } else {
+    return `E${year}`;
+  }
+}
 function getMarketValue(game, market) {
   const pts = parseFloat(game.points) || 0;
   const reb = parseFloat(game.total_rebounds) || 0;
@@ -943,6 +961,7 @@ app.get(
         positions,
         opponentId,
         targetAvg,
+        currentSeason,
       ]);
       res.json(result.rows);
     } catch (error) {
@@ -1096,13 +1115,14 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     // ==========================================
 
     // 1. Get current teams for all matched players
+    const currentSeason = getCurrentSeasonCode();
     const teamsRes = await pool.query(
       `
       SELECT DISTINCT ON (player_id) player_id, team_id 
       FROM player_season_stats 
-      WHERE player_id = ANY($1) AND season_code = 'E2025'
+      WHERE player_id = ANY($1) AND season_code = $2
     `,
-      [playerIdsArr],
+      [playerIdsArr, currentSeason],
     );
     const teamMap = {}; // player_id -> team_id
     teamsRes.rows.forEach((r) => (teamMap[r.player_id] = r.team_id));

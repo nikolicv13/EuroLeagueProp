@@ -12,7 +12,7 @@ export default function TipsDashboard() {
   const [loading, setLoading] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  const [oddsLeagueId, setOddsLeagueId] = useState("631799");
+  const [oddsLeagueId, setOddsLeagueId] = useState("571881");
   const [jsonGames, setJsonGames] = useState<JsonGame[]>([]);
   const [jsonTeams, setJsonTeams] = useState<string[]>([]);
   const [selectedJsonGameId, setSelectedJsonGameId] = useState<string>("all");
@@ -33,7 +33,7 @@ export default function TipsDashboard() {
   const [maxOdds, setMaxOdds] = useState(10.0);
 
   const TIPS_PER_PAGE = 10;
-  const testDate = "2026-05-24"; // Kept for TipCard display
+  const testDate = "2026-10-7"; // Kept for TipCard display
 
   useEffect(() => {
     document.body.style.overflow = mobileFilterOpen ? "hidden" : "";

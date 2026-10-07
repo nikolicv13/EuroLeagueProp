@@ -13,7 +13,7 @@ export default function PlayerSearchPage() {
   const [searchParams] = useSearchParams();
 
   const [inputLeague, setInputLeague] = useState(
-    searchParams.get("leagueId") || "631799",
+    searchParams.get("leagueId") || "571881",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
@@ -61,7 +61,7 @@ export default function PlayerSearchPage() {
     params.set("overUnder", inputOverUnder);
     params.set("teamId", selectedPlayer.team_id);
     params.set("position", selectedPlayer.position);
-    params.set("season", "E2025");
+    params.set("season", "E2026");
     navigate(`/player-stats/${selectedPlayer.player_id}?${params.toString()}`, {
       state: {
         player_id: selectedPlayer.player_id,
@@ -71,7 +71,7 @@ export default function PlayerSearchPage() {
         line: inputLine,
         selection: inputOverUnder,
         team_id: selectedPlayer.team_id,
-        season_code: "E2025",
+        season_code: "E2026",
       },
     });
   };

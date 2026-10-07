@@ -42,7 +42,11 @@ export default function PlayerStats() {
   const [savedState] = useState<LocationState | null>(
     location.state as LocationState | null,
   );
-
+  const getCurrentSeason = () => {
+    const now = new Date();
+    if (now.getMonth() >= 9) return `E${now.getFullYear() + 1}`;
+    return `E${now.getFullYear()}`;
+  };
   const getParam = (key: string, fallback: string) => {
     const val = searchParams.get(key);
     return val && val !== "null" ? val : fallback;
@@ -70,7 +74,7 @@ export default function PlayerStats() {
       : savedState?.opponent || "",
     team_id: getParam("teamId", savedState?.team_id || ""),
     position: getParam("position", savedState?.position || ""),
-    season: getParam("season", savedState?.season_code || "E2025"),
+    season: getParam("season", savedState?.season_code || getCurrentSeason()),
     game_id: savedState?.game_id,
   };
 
@@ -90,7 +94,8 @@ export default function PlayerStats() {
     "all" | "regular" | "playoffs"
   >("all");
   const [logPage, setLogPage] = useState(1);
-  const [selectedSeason, setSelectedSeason] = useState<string>("E2025");
+  const [selectedSeason, setSelectedSeason] =
+    useState<string>(getCurrentSeason());
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([
     "euroleague",
   ]);
@@ -102,7 +107,7 @@ export default function PlayerStats() {
   const [inputLine, setInputLine] = useState(tip.line);
   const [inputOverUnder, setInputOverUnder] = useState(tip.selection);
   const [inputLeague, setInputLeague] = useState(
-    searchParams.get("leagueId") || "631799",
+    searchParams.get("leagueId") || "571881",
   );
   const [allLeagueOdds, setAllLeagueOdds] = useState<Tip[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>(
