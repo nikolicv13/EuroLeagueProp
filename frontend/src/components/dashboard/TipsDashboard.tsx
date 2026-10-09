@@ -33,7 +33,7 @@ export default function TipsDashboard() {
   const [maxOdds, setMaxOdds] = useState(10.0);
 
   const TIPS_PER_PAGE = 10;
-  const testDate = "2026-10-7"; // Kept for TipCard display
+  const testDate = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     document.body.style.overflow = mobileFilterOpen ? "hidden" : "";

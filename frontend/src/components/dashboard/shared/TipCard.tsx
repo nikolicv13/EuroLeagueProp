@@ -67,7 +67,12 @@ type Props = {
 function teamLogoUrl(teamId: string | number) {
   return `/logos/${teamId}.png`;
 }
-
+const currentSeason = () => {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  return month >= 9 ? `E${year}` : `E${year - 1}`;
+};
 function formatStartTime(isoString: string) {
   try {
     const d = new Date(isoString);
@@ -262,7 +267,7 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
               "Opponent";
             const pos = tip.position || "UNK";
             const teamId = tip.team_id || "UNK";
-            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=E2026&leagueId=631799`;
+            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=${currentSeason()}&leagueId=631799`;
             navigate(url, { state: tip });
           }}
         >

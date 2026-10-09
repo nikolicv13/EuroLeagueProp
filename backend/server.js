@@ -227,7 +227,7 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
     const limitParam = req.query.limit;
     const limit = limitParam !== undefined ? parseInt(limitParam, 10) : 50;
     const opponent = req.query.opponent;
-    const seasonCode = req.query.season || "E2026";
+    const seasonCode = req.query.season || getCurrentSeasonCode();
     const gameDate = req.query.date;
     const opposingPlayerId = req.query.oppPlayer;
     const withTeammateId = req.query.withTeammate;
@@ -324,7 +324,7 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
     }
 
     // Add season filter if provided
-    if (seasonCode) {
+    if (seasonCode && seasonCode !== "all") {
       query += ` AND g.season_code = $${paramIndex}`;
       params.push(seasonCode);
       paramIndex++;
@@ -962,7 +962,7 @@ app.get(
         positions,
         opponentId,
         targetAvg,
-        currentSeason,
+        getCurrentSeasonCode(),
       ]);
       res.json(result.rows);
     } catch (error) {
@@ -1000,6 +1000,7 @@ app.get("/api/players/search", async (req, res) => {
 // ==========================================
 app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
   const { leagueId } = req.params;
+
   // ===== MOCK MODE =====
   if (USE_MOCK_ODDS) {
     try {
@@ -1008,12 +1009,10 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         [leagueId],
       );
 
-      // 👇 FIX: Handle Supabase lowercase column names
       const parsedData = result.rows.map((row) => ({
         ...row,
         line: row.line ? parseFloat(row.line) : 0,
         odds: row.odds ? parseFloat(row.odds) : 1.9,
-        // Check for both camelCase and lowercase
         overOdds: row.overOdds
           ? parseFloat(row.overOdds)
           : row.overodds
@@ -1068,7 +1067,6 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     );
     const allPlayers = allPlayersRes.rows;
 
-    // Helper to match "First Last" or "LAST FIRST" using JS instead of DB queries
     const findPlayer = (name) => {
       const parts = name
         .toLowerCase()
@@ -1081,9 +1079,9 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     };
 
     // ==========================================
-    // OPTIMIZATION: PRE-MATCH PLAYERS & COLLECT IDS
+    // PRE-MATCH PLAYERS & COLLECT IDS
     // ==========================================
-    const matchedPlayersMap = {}; // match.id -> dbPlayer
+    const matchedPlayersMap = {};
     const uniquePlayerIds = new Set();
 
     for (const match of detailedMatches) {
@@ -1105,18 +1103,16 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
 
     const playerIdsArr = Array.from(uniquePlayerIds);
 
-    // Early exit if no players matched
     if (playerIdsArr.length === 0) {
-      // ... build empty tips fallback if needed, or just return empty
       return res.json([]);
     }
 
     // ==========================================
-    // OPTIMIZATION: BULK FETCH TEAMS, GAMES, STATS (3 Queries)
+    // BULK FETCH TEAMS, GAMES, STATS
     // ==========================================
+    const currentSeason = getCurrentSeasonCode(); // ✅ FIX: Use dynamic season
 
     // 1. Get current teams for all matched players
-    const currentSeason = getCurrentSeasonCode();
     const teamsRes = await pool.query(
       `
       SELECT DISTINCT ON (player_id) player_id, team_id 
@@ -1125,12 +1121,13 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     `,
       [playerIdsArr, currentSeason],
     );
-    const teamMap = {}; // player_id -> team_id
+    const teamMap = {};
     teamsRes.rows.forEach((r) => (teamMap[r.player_id] = r.team_id));
 
     console.log(
       `🔍 [DEBUG] Season: ${currentSeason}, Matched players: ${playerIdsArr.length}, Found teams: ${teamsRes.rows.length}`,
     );
+
     if (teamsRes.rows.length === 0 && playerIdsArr.length > 0) {
       console.log(
         `❌ [DEBUG] NO TEAMS FOUND! Checking if stats exist for sample player...`,
@@ -1144,7 +1141,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
 
     // 2. Get next games for all those teams
     const teamIdsArr = Object.values(teamMap);
-    let gameMap = {}; // team_id -> next game
+    let gameMap = {};
 
     if (teamIdsArr.length > 0) {
       const gamesRes = await pool.query(
@@ -1171,34 +1168,42 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       );
     }
 
-    // 3. Get Stats for ALL matched players (Last 50 games per player)
+    // ==========================================
+    // ✅ FIX: FETCH STATS FOR CURRENT SEASON ONLY
+    // ==========================================
     const statsRes = await pool.query(
       `
-      SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
-             bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date
-      FROM box_scores bs
-      JOIN games g ON bs.game_id = g.game_id 
-      WHERE bs.player_id = ANY($1) 
-        AND g.date <= CURRENT_DATE 
-        AND bs.minutes IS NOT NULL 
-        AND bs.minutes != 'DNP' 
-      ORDER BY bs.player_id, g.date DESC
-    `,
-      [playerIdsArr],
+  SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+         bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date
+  FROM box_scores bs
+  JOIN games g ON bs.game_id = g.game_id 
+  WHERE bs.player_id = ANY($1) 
+    AND g.season_code = $2
+    AND g.date <= CURRENT_DATE 
+    AND bs.minutes IS NOT NULL 
+    AND bs.minutes != 'DNP' 
+  ORDER BY bs.player_id, g.date DESC
+`,
+      [playerIdsArr, currentSeason],
     );
 
-    const statsMap = {}; // player_id -> array of games (max 50)
+    const statsMap = {};
     statsRes.rows.forEach((r) => {
       if (!statsMap[r.player_id]) statsMap[r.player_id] = [];
-      if (statsMap[r.player_id].length < 50) {
-        statsMap[r.player_id].push(r);
-      }
+      statsMap[r.player_id].push(r);
     });
 
+    // ✅ DEBUG: Verify season filtering
+    const samplePlayerId = playerIdsArr[0];
+    const sampleGames = statsMap[samplePlayerId] || [];
+    console.log(
+      `✅ [ROUTE 10] Season: ${currentSeason}, Sample player ${samplePlayerId} has ${sampleGames.length} games this season`,
+    );
+
     // ==========================================
-    // OPTIMIZATION: BULK FETCH H2H DATA
+    // BULK FETCH H2H DATA
     // ==========================================
-    const opponentMap = {}; // player_id -> opponent_team_id
+    const opponentMap = {};
     for (const pid of playerIdsArr) {
       const tid = teamMap[pid];
       const nextGame = gameMap[tid];
@@ -1210,22 +1215,26 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
 
     const opponentIdsSet = new Set(Object.values(opponentMap));
     const opponentIdsArr = Array.from(opponentIdsSet);
-    let h2hMap = {}; // player_id -> [games]
+    let h2hMap = {};
 
     if (opponentIdsArr.length > 0) {
+      // ==========================================
+      // ✅ FIX: FETCH H2H FOR CURRENT SEASON ONLY
+      // ==========================================
       const h2hRes = await pool.query(
         `
-        SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
-               bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date,
-               g.team_id_a, g.team_id_b, bs.team_id as bs_team_id
-        FROM box_scores bs
-        JOIN games g ON bs.game_id = g.game_id 
-        WHERE bs.player_id = ANY($1) 
-          AND (g.team_id_a = ANY($2) OR g.team_id_b = ANY($2))
-          AND bs.minutes != 'DNP'
-        ORDER BY bs.player_id, g.date DESC
-      `,
-        [playerIdsArr, opponentIdsArr],
+  SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+         bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date,
+         g.team_id_a, g.team_id_b, bs.team_id as bs_team_id
+  FROM box_scores bs
+  JOIN games g ON bs.game_id = g.game_id 
+  WHERE bs.player_id = ANY($1) 
+    AND (g.team_id_a = ANY($2) OR g.team_id_b = ANY($2))
+    AND g.date <= CURRENT_DATE
+    AND bs.minutes != 'DNP'
+  ORDER BY bs.player_id, g.date DESC
+`,
+        [playerIdsArr, opponentIdsArr], // ✅ Removed currentSeason param
       );
 
       // Filter to ensure it's against the SPECIFIC opponent for that player
@@ -1255,12 +1264,11 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       const oddsArr = Object.values(odds);
 
       let realOpponentId = "TBD";
-      let realOpponentName = opponentName || match.away || "Unknown"; // Fallback
+      let realOpponentName = opponentName || match.away || "Unknown";
       let realGameId = String(match.id);
       let currentTeamId = dbPlayer.team_id;
       let currentTeamName = dbPlayer.team_id;
 
-      // Only process DB logic if we actually matched the player earlier
       if (uniquePlayerIds.has(dbPlayer.player_id)) {
         currentTeamId = teamMap[dbPlayer.player_id] || dbPlayer.team_id;
 
@@ -1276,12 +1284,12 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
           realGameId = nextGame.game_id;
           if (nextGame.team_id_a === currentTeamId) {
             realOpponentId = nextGame.team_id_b;
-            realOpponentName = nextGame.team_b || nextGame.team_id_b; // Fallback to ID
-            currentTeamName = nextGame.team_a || nextGame.team_id_a; // Fallback to ID
+            realOpponentName = nextGame.team_b || nextGame.team_id_b;
+            currentTeamName = nextGame.team_a || nextGame.team_id_a;
           } else {
             realOpponentId = nextGame.team_id_a;
-            realOpponentName = nextGame.team_a || nextGame.team_id_a; // Fallback to ID
-            currentTeamName = nextGame.team_b || nextGame.team_id_b; // Fallback to ID
+            realOpponentName = nextGame.team_a || nextGame.team_id_a;
+            currentTeamName = nextGame.team_b || nextGame.team_id_b;
           }
         }
       }
@@ -1399,7 +1407,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         let score = 50;
         let finalSelection = "over";
 
-        // Get pre-fetched stats for this player
+        // ✅ FIX: This array now ONLY contains current season games
         const games = statsMap[dbPlayer.player_id] || [];
 
         if (games.length > 0) {
@@ -1409,7 +1417,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
             l10Attempts = 0;
           const last10 = games.slice(0, 10);
           for (const g of last10) {
-            const val = getMarketValue(g, config.market); // USE HELPER HERE
+            const val = getMarketValue(g, config.market);
             l10Attempts++;
             if (val > line) l10Over++;
             else if (val < line) l10Under++;
@@ -1423,7 +1431,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
             let hits = 0,
               attempts = 0;
             for (const g of list) {
-              const val = getMarketValue(g, config.market); // USE HELPER HERE
+              const val = getMarketValue(g, config.market);
               attempts++;
               if (finalSelection === "over" && val > line) hits++;
               if (finalSelection === "under" && val < line) hits++;
@@ -1436,16 +1444,15 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
             };
           };
 
+          // ✅ FIX: "season" now correctly maps to ALL games fetched for the current season
           const sA = calcRate(games);
           const l5A = calcRate(games.slice(0, 5));
           const l10A = calcRate(games.slice(0, 10));
           const l15A = calcRate(games.slice(0, 15));
 
-          // --- ADD H2H CALCULATION HERE ---
           const h2hGames = h2hMap[dbPlayer.player_id] || [];
           const vsOppA = calcRate(h2hGames);
 
-          // --- UPDATE vs_opp WITH vsOppA ---
           hitRates = {
             season: sA,
             last5: l5A,

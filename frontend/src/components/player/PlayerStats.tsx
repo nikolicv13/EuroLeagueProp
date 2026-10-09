@@ -452,13 +452,14 @@ export default function PlayerStats() {
   useEffect(() => {
     if (!tip.player_id) return;
     (async () => {
-      const seasonToFetch = selectedOppPlayer?.id ? undefined : selectedSeason;
+      // ✅ Always pass selectedSeason for the main chart
+      const seasonToFetch = selectedSeason;
 
       const data = await fetchPlayerStats(
         tip.player_id,
         0,
         undefined,
-        seasonToFetch,
+        seasonToFetch, // Current season for main stats
         undefined,
         selectedOppPlayer?.id,
         selectedWith?.id,
@@ -499,7 +500,7 @@ export default function PlayerStats() {
         tip.player_id,
         0,
         tip.opponent_team_id,
-        undefined,
+        "all", // ✅ FIX: Fetch ALL seasons for H2H
         undefined,
       );
       setH2hStats(

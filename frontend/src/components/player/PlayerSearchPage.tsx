@@ -26,6 +26,12 @@ export default function PlayerSearchPage() {
   const [inputOverUnder, setInputOverUnder] = useState<"over" | "under">(
     "over",
   );
+  const getCurrentSeason = () => {
+    const now = new Date();
+    return now.getMonth() >= 9
+      ? `E${now.getFullYear()}`
+      : `E${now.getFullYear() - 1}`;
+  };
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -61,7 +67,7 @@ export default function PlayerSearchPage() {
     params.set("overUnder", inputOverUnder);
     params.set("teamId", selectedPlayer.team_id);
     params.set("position", selectedPlayer.position);
-    params.set("season", "E2026");
+    params.set("season", getCurrentSeason());
     navigate(`/player-stats/${selectedPlayer.player_id}?${params.toString()}`, {
       state: {
         player_id: selectedPlayer.player_id,
@@ -71,7 +77,7 @@ export default function PlayerSearchPage() {
         line: inputLine,
         selection: inputOverUnder,
         team_id: selectedPlayer.team_id,
-        season_code: "E2026",
+        season_code: getCurrentSeason(),
       },
     });
   };
