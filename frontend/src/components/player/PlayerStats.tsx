@@ -44,8 +44,10 @@ export default function PlayerStats() {
   );
   const getCurrentSeason = () => {
     const now = new Date();
-    if (now.getMonth() >= 9) return `E${now.getFullYear() + 1}`;
-    return `E${now.getFullYear()}`;
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    if (month >= 9) return `E${year}`;
+    return `E${year - 1}`;
   };
   const getParam = (key: string, fallback: string) => {
     const val = searchParams.get(key);

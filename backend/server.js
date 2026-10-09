@@ -33,14 +33,15 @@ function getCurrentSeasonCode() {
   const month = now.getMonth(); // 0 = Jan, 9 = Oct
   const year = now.getFullYear();
 
-  // Euroleague starts in October.
-  // If it's Oct-Dec, the season ends next year (e.g., Oct 2025 -> E2026)
-  // If it's Jan-Sept, the season ends this year (e.g., Feb 2026 -> E2026)
+  // Euroleague season EYYYY starts in October of YYYY
+  // and ends in Spring of YYYY+1.
+  // So, if it's Oct-Dec, we are in season E{currentYear}.
+  // If it's Jan-Sept, we are in season E{currentYear - 1}.
   if (month >= 9) {
     // October or later
-    return `E${year + 1}`;
-  } else {
     return `E${year}`;
+  } else {
+    return `E${year - 1}`;
   }
 }
 function getMarketValue(game, market) {
@@ -1127,6 +1128,20 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     const teamMap = {}; // player_id -> team_id
     teamsRes.rows.forEach((r) => (teamMap[r.player_id] = r.team_id));
 
+    console.log(
+      `🔍 [DEBUG] Season: ${currentSeason}, Matched players: ${playerIdsArr.length}, Found teams: ${teamsRes.rows.length}`,
+    );
+    if (teamsRes.rows.length === 0 && playerIdsArr.length > 0) {
+      console.log(
+        `❌ [DEBUG] NO TEAMS FOUND! Checking if stats exist for sample player...`,
+      );
+      const check = await pool.query(
+        `SELECT season_code, COUNT(*) as cnt FROM player_season_stats WHERE player_id = $1 GROUP BY season_code`,
+        [playerIdsArr[0]],
+      );
+      console.log(`❌ [DEBUG] Sample player seasons:`, check.rows);
+    }
+
     // 2. Get next games for all those teams
     const teamIdsArr = Object.values(teamMap);
     let gameMap = {}; // team_id -> next game
@@ -1147,6 +1162,13 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         if (!gameMap[g.team_id_a]) gameMap[g.team_id_a] = g;
         if (!gameMap[g.team_id_b]) gameMap[g.team_id_b] = g;
       });
+
+      console.log(
+        `🔍 [DEBUG] Team IDs from stats: [${teamIdsArr.slice(0, 5).join(", ")}]`,
+      );
+      console.log(
+        `🔍 [DEBUG] Games found: ${gamesRes.rows.length}, Teams in gameMap: [${Object.keys(gameMap).slice(0, 5).join(", ")}]`,
+      );
     }
 
     // 3. Get Stats for ALL matched players (Last 50 games per player)
@@ -1243,6 +1265,13 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         currentTeamId = teamMap[dbPlayer.player_id] || dbPlayer.team_id;
 
         const nextGame = gameMap[currentTeamId];
+
+        if (!nextGame) {
+          console.log(
+            `⚠️ [DEBUG] NO NEXT GAME for ${dbPlayer.player_name} (${dbPlayer.player_id}). Team: ${currentTeamId}. Is team in gameMap? ${!!gameMap[currentTeamId]}`,
+          );
+        }
+
         if (nextGame) {
           realGameId = nextGame.game_id;
           if (nextGame.team_id_a === currentTeamId) {
