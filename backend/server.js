@@ -171,23 +171,19 @@ app.get("/api/test", async (req, res) => {
 // ROUTE 2: Search Players
 // ==========================================
 // Usage: http://localhost:3001/api/players/search?q=larkin
-app.get(
-  "/api/players/search",
-  authMiddleware,
-  tierMiddleware("pro"),
-  async (req, res) => {
-    try {
-      // Get the search word from the URL (?q=...)
-      const searchQuery = req.query.q;
+app.get("/api/players/search", optionalAuth, async (req, res) => {
+  try {
+    // Get the search word from the URL (?q=...)
+    const searchQuery = req.query.q;
 
-      if (!searchQuery) {
-        return res
-          .status(400)
-          .json({ error: "Please provide a search term using ?q=name" });
-      }
+    if (!searchQuery) {
+      return res
+        .status(400)
+        .json({ error: "Please provide a search term using ?q=name" });
+    }
 
-      const result = await pool.query(
-        `SELECT 
+    const result = await pool.query(
+      `SELECT 
         p.player_id, 
         MAX(p.player_name) as player_name, 
         MAX(p.position) as position, 
@@ -205,15 +201,14 @@ app.get(
       GROUP BY p.player_id
       ORDER BY MAX(ps.points_per_game) DESC NULLS LAST
       LIMIT 15`,
-        [`%${searchQuery}%`],
-      );
+      [`%${searchQuery}%`],
+    );
 
-      res.json(result.rows);
-    } catch (error) {
-      res.status(500).json({ error: "Search failed", details: error.message });
-    }
-  },
-);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Search failed", details: error.message });
+  }
+});
 
 // ==========================================
 // ROUTE 3: Get Player Game Stats (Updated)
@@ -971,29 +966,6 @@ app.get(
     }
   },
 );
-// ==========================================
-// ROUTE 8: Search Players
-// ==========================================
-app.get("/api/players/search", async (req, res) => {
-  try {
-    const q = req.query.q;
-    if (!q || q.length < 2) return res.json([]);
-
-    const result = await pool.query(
-      `SELECT DISTINCT ON (player_name) 
-        player_id, player_name, team_id, position 
-      FROM players 
-      WHERE player_name ILIKE $1 
-      ORDER BY player_name, player_id DESC 
-      LIMIT 10`,
-      [`%${q}%`],
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: "Search failed", details: error.message });
-  }
-});
 
 // ==========================================
 // ROUTE 10: Fetch Expanded Props from BrazilBet
