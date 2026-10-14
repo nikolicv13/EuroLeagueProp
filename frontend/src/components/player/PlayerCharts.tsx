@@ -118,8 +118,17 @@ export default function PlayerCharts(props: PlayerChartsProps) {
   } = props;
   const mKey = getMarketKey(tip.market);
   const mLabel = getMarketLabel(tip.market);
-  const showFga = tip.market === "points";
-  const show3pta = tip.market === "points" || tip.market === "threes_made";
+  const marketIncludesPoints = [
+    "points",
+    "points_alt",
+    "points_alt2",
+    "pa",
+    "pr",
+    "pra",
+  ].includes(tip.market);
+
+  const showFga = marketIncludesPoints;
+  const show3pta = marketIncludesPoints || tip.market === "threes_made";
 
   return (
     <>

@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { getTeamColor, getTeamTheme } from "../../../utils/teamColors";
 // Import the CSS Module
 import styles from "./TipCard.module.css";
@@ -67,12 +66,7 @@ type Props = {
 function teamLogoUrl(teamId: string | number) {
   return `/logos/${teamId}.png`;
 }
-const currentSeason = () => {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  return month >= 9 ? `E${year}` : `E${year - 1}`;
-};
+
 function formatStartTime(isoString: string) {
   try {
     const d = new Date(isoString);
@@ -156,7 +150,6 @@ function StatBox({ label, hr }: { label: string; hr?: HitRate }) {
 
 export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
   const rating = ratingFromScore(tip.score);
-  const navigate = useNavigate();
 
   const matchupLeft = tip.team_abbr ?? tip.team_id;
   const matchupRight = tip.opponent_abbr ?? tip.opponent_team_id;
@@ -267,8 +260,14 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
               "Opponent";
             const pos = tip.position || "UNK";
             const teamId = tip.team_id || "UNK";
-            const url = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=${currentSeason()}&leagueId=631799`;
-            navigate(url, { state: tip });
+            const getCurrentSeason = () => {
+              const now = new Date();
+              return now.getMonth() >= 9
+                ? `E${now.getFullYear()}`
+                : `E${now.getFullYear() - 1}`;
+            };
+            const path = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=${getCurrentSeason()}&leagueId=571881`;
+            window.open(path, "_blank", "noopener,noreferrer");
           }}
         >
           View Stats

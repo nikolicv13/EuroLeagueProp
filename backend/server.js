@@ -698,6 +698,7 @@ app.get("/api/defense/:teamId/:position", async (req, res) => {
     // ==========================================
     else {
       const numLimit = parseInt(limit) || 5;
+      const currentSeason = getCurrentSeasonCode();
 
       // 1. Get the Season baseline (Rank + Avg) from the fast Materialized View
       const baselineRes = await pool.query(
@@ -706,42 +707,62 @@ app.get("/api/defense/:teamId/:position", async (req, res) => {
       );
       const baseline = baselineRes.rows.length > 0 ? baselineRes.rows[0] : null;
 
-      // 2. Get the last X games for this team
+      // 2. Get the last X PLAYED games for this team THIS SEASON
       const recentGamesRes = await pool.query(
         `SELECT game_id FROM games 
-         WHERE (team_id_a = $1 OR team_id_b = $1) 
-         ORDER BY date DESC LIMIT $2`,
-        [teamId, numLimit],
+     WHERE (team_id_a = $1 OR team_id_b = $1) 
+       AND season_code = $2
+       AND date <= CURRENT_DATE
+       AND score_a IS NOT NULL
+     ORDER BY date DESC LIMIT $3`,
+        [teamId, currentSeason, numLimit],
       );
 
       if (recentGamesRes.rows.length === 0) {
-        return res.json({ team_id: teamId, position: position, stats: null });
+        return res.json({
+          team_id: teamId,
+          position: position,
+          total_teams: baseline?.total_teams_in_position || null,
+          stats: null,
+        });
       }
 
       const gameIds = recentGamesRes.rows.map((g) => g.game_id);
 
+      console.log(
+        `🔍 [DEFENSE L${numLimit}] Team: ${teamId}, Position: ${position}`,
+      );
+      console.log(
+        `🔍 [DEFENSE L${numLimit}] Game IDs: ${JSON.stringify(gameIds)}`,
+      );
+
       // 3. Get opposing players' stats in those recent games
       const statsRes = await pool.query(
         `SELECT 
-          ROUND(AVG(bs.points)::numeric, 2) as avg_points,
-          ROUND(AVG(bs.total_rebounds)::numeric, 2) as avg_rebounds,
-          ROUND(AVG(bs.assists)::numeric, 2) as avg_assists,
-          ROUND(AVG(bs.three_points_made)::numeric, 2) as avg_threes,
-          ROUND(AVG(bs.steals)::numeric, 2) as avg_steals,
-          ROUND(AVG(bs.blocks_favour)::numeric, 2) as avg_blocks
-        FROM box_scores bs
-        JOIN players p ON bs.player_id = p.player_id
-        WHERE bs.game_id = ANY($1)
-          AND p.position = $2
-          AND bs.team_id != $3
-          AND bs.minutes IS NOT NULL 
-          AND bs.minutes != 'DNP'`,
+      ROUND(AVG(bs.points)::numeric, 2) as avg_points,
+      ROUND(AVG(bs.total_rebounds)::numeric, 2) as avg_rebounds,
+      ROUND(AVG(bs.assists)::numeric, 2) as avg_assists,
+      ROUND(AVG(bs.three_points_made)::numeric, 2) as avg_threes,
+      ROUND(AVG(bs.steals)::numeric, 2) as avg_steals,
+      ROUND(AVG(bs.blocks_favour)::numeric, 2) as avg_blocks,
+      COUNT(*) as sample_size
+    FROM box_scores bs
+    JOIN players p ON bs.player_id = p.player_id
+    WHERE bs.game_id = ANY($1)
+      AND p.position = $2
+      AND bs.team_id != $3
+      AND bs.minutes IS NOT NULL 
+      AND bs.minutes != 'DNP'`,
         [gameIds, position, teamId],
       );
 
       const row = statsRes.rows[0];
 
-      // 4. Helper to build stat object with trend calculation
+      console.log(
+        `🔍 [DEFENSE L${numLimit}] Sample size: ${row?.sample_size}, Avg PTS: ${row?.avg_points}`,
+      );
+
+      // Helper to build stat object with trend calculation
       const buildStat = (recentAvg, seasonAvg, seasonRank, totalTeams) => {
         const recent = parseFloat(recentAvg) || 0;
         const season = parseFloat(seasonAvg) || 0;
@@ -749,7 +770,7 @@ app.get("/api/defense/:teamId/:position", async (req, res) => {
 
         return {
           avg: recent,
-          rank: seasonRank, // Keep the season rank for context!
+          rank: seasonRank,
           season_avg: season,
           trend:
             diff !== 0
