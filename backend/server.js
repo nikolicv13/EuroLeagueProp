@@ -713,7 +713,7 @@ app.get("/api/defense/:teamId/:position", async (req, res) => {
      WHERE (team_id_a = $1 OR team_id_b = $1) 
        AND season_code = $2
        AND date <= CURRENT_DATE
-       AND score_a IS NOT NULL
+       AND score_quarter_1_a IS NOT NULL
      ORDER BY date DESC LIMIT $3`,
         [teamId, currentSeason, numLimit],
       );
@@ -1061,14 +1061,54 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     const allPlayers = allPlayersRes.rows;
 
     const findPlayer = (name) => {
-      const parts = name
-        .toLowerCase()
-        .split(" ")
-        .filter((p) => p.length > 1);
-      return allPlayers.find((p) => {
-        const pLower = p.player_name.toLowerCase();
-        return parts.every((part) => pLower.includes(part));
-      });
+      // 1. Clean up BrazilBet name (strip newlines, trim)
+      const cleanName = name.replace(/\s+/g, " ").trim();
+
+      // 2. Helper: strip punctuation (hyphens, apostrophes, periods) and lowercase
+      // "Talen Horton-Tucker" -> "talen horton tucker"
+      // "Oshae Brissett"      -> "oshae brissett"
+      // "T.J. Shorts"         -> "t j shorts"
+      const normalize = (str) =>
+        str
+          .toLowerCase()
+          .replace(/'/g, "") // ✅ FIX: Remove apostrophes entirely (O'SHAE -> OSHAE)
+          .replace(/[^a-z0-9\s]/g, " ") // replace other punctuation with space
+          .replace(/\s+/g, " ") // collapse multiple spaces
+          .trim();
+
+      const normalizedName = normalize(cleanName);
+      const bbParts = normalizedName.split(" ").filter((p) => p.length > 1);
+      // e.g., ["talen", "horton", "tucker"] or ["shorts"] (filters out "t" and "j")
+
+      if (bbParts.length === 0) return null;
+
+      let bestMatch = null;
+      let bestScore = 0;
+
+      for (const p of allPlayers) {
+        const pNormalized = normalize(p.player_name);
+        const dbParts = pNormalized.split(" ").filter((p) => p.length > 1);
+
+        // 3. Score = how many words match EXACTLY (not substring)
+        let score = 0;
+        for (const bbPart of bbParts) {
+          if (dbParts.includes(bbPart)) score++;
+        }
+
+        // 4. Determine if this is a good match
+        // - For 1-2 word names (e.g., "Oshae Brissett"), we require ALL words to match.
+        // - For 3+ word names (e.g., "Both Tut Gach"), we allow 1 missing word (middle name).
+        const isGoodMatch =
+          (bbParts.length <= 2 && score === bbParts.length) ||
+          (bbParts.length >= 3 && score >= 2);
+
+        if (isGoodMatch && score > bestScore) {
+          bestScore = score;
+          bestMatch = p;
+        }
+      }
+
+      return bestMatch;
     };
 
     // ==========================================
@@ -1103,17 +1143,99 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
     // ==========================================
     // BULK FETCH TEAMS, GAMES, STATS
     // ==========================================
-    const currentSeason = getCurrentSeasonCode(); // ✅ FIX: Use dynamic season
+    const currentSeason = getCurrentSeasonCode();
 
-    // 1. Get current teams for all matched players
+    // ✅ STATIC TEAM MAPPING (No DB query needed)
+    const TEAM_MAP = {
+      Fenerbahce: "FEN",
+      Partizan: "PAR",
+      "Olimpia Milano": "MIL",
+      Milano: "MIL",
+      Dubai: "DUB",
+      Valencia: "PAM",
+      "Maccabi Tel Aviv": "HTA",
+      Maccabi: "HTA",
+      "Real Madrid": "MAD",
+      Madrid: "MAD",
+      "Lyon-Villeurbanne": "ASV",
+      Villeurbanne: "ASV",
+      Asvel: "ASV",
+      Baskonia: "BAS",
+      Vitoria: "BAS",
+      Barcelona: "BAR",
+      Bayern: "MUN",
+      Munich: "MUN",
+      Berlin: "BER",
+      Olympiacos: "OLY",
+      Panathinaikos: "PAO",
+      Zalgiris: "ZAL",
+      Kaunas: "ZAL",
+      Virtus: "VIL",
+      Bologna: "VIL",
+      "Crvena Zvezda": "RED",
+      Belgrade: "RED",
+      Efes: "IST",
+      "Anadolu Efes": "IST",
+      Istanbul: "IST",
+      Paris: "PRS",
+      Monaco: "MON",
+    };
+
+    const TEAM_ID_TO_NAME = {
+      FEN: "Fenerbahce Beko Istanbul",
+      PAR: "Partizan Mozzart Bet Belgrade",
+      MIL: "Armani Olimpia Milan",
+      DUB: "Dubai Basketball",
+      PAM: "Valencia Basket",
+      HTA: "Hapoel Tel Aviv",
+      TEL: "Maccabi Rapyd Tel Aviv",
+      MAD: "Real Madrid",
+      ASV: "LDLC ASVEL Villeurbanne",
+      BAS: "Cazoo Baskonia Vitoria Gasteiz",
+      BAR: "FC Barcelona",
+      MUN: "FC Bayern Munich",
+      BER: "ALBA Berlin",
+      OLY: "Olympiacos Piraeus",
+      PAO: "Panathinaikos AK Athens",
+      ZAL: "Zalgiris Kaunas",
+      VIL: "Virtus Segafredo Bologna",
+      RED: "Crvena Zvezda Meridianbet Belgrade",
+      IST: "Anadolu Efes Istanbul",
+      PRS: "Paris Basketball",
+      MON: "AS Monaco",
+      ULK: "Fenerbahce",
+    };
+
+    const resolveOpponentTeam = (name, excludeTeamId) => {
+      if (!name) return null;
+      const lower = name.toLowerCase().trim();
+      for (const [key, id] of Object.entries(TEAM_MAP)) {
+        if (id === excludeTeamId) continue;
+        if (key.toLowerCase() === lower) return id;
+      }
+      for (const [key, id] of Object.entries(TEAM_MAP)) {
+        if (id === excludeTeamId) continue;
+        if (
+          lower.includes(key.toLowerCase()) ||
+          key.toLowerCase().includes(lower)
+        )
+          return id;
+      }
+      return null;
+    };
+
+    // 1. Get current teams for all matched players (fallback to most recent season)
     const teamsRes = await pool.query(
       `
       SELECT DISTINCT ON (player_id) player_id, team_id 
       FROM player_season_stats 
-      WHERE player_id = ANY($1) AND season_code = $2
+      WHERE player_id = ANY($1)
+      ORDER BY player_id, season_code DESC
     `,
-      [playerIdsArr, currentSeason],
+      [playerIdsArr],
     );
+
+    // ✅ THIS IS THE VARIABLE THAT WAS ACCIDENTALLY DELETED
     const teamMap = {};
     teamsRes.rows.forEach((r) => (teamMap[r.player_id] = r.team_id));
 
@@ -1121,20 +1243,9 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       `🔍 [DEBUG] Season: ${currentSeason}, Matched players: ${playerIdsArr.length}, Found teams: ${teamsRes.rows.length}`,
     );
 
-    if (teamsRes.rows.length === 0 && playerIdsArr.length > 0) {
-      console.log(
-        `❌ [DEBUG] NO TEAMS FOUND! Checking if stats exist for sample player...`,
-      );
-      const check = await pool.query(
-        `SELECT season_code, COUNT(*) as cnt FROM player_season_stats WHERE player_id = $1 GROUP BY season_code`,
-        [playerIdsArr[0]],
-      );
-      console.log(`❌ [DEBUG] Sample player seasons:`, check.rows);
-    }
-
     // 2. Get next games for all those teams
     const teamIdsArr = Object.values(teamMap);
-    let gameMap = {};
+    let gameMap = {}; // team_id -> next game
 
     if (teamIdsArr.length > 0) {
       const gamesRes = await pool.query(
@@ -1152,31 +1263,24 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         if (!gameMap[g.team_id_a]) gameMap[g.team_id_a] = g;
         if (!gameMap[g.team_id_b]) gameMap[g.team_id_b] = g;
       });
-
-      console.log(
-        `🔍 [DEBUG] Team IDs from stats: [${teamIdsArr.slice(0, 5).join(", ")}]`,
-      );
-      console.log(
-        `🔍 [DEBUG] Games found: ${gamesRes.rows.length}, Teams in gameMap: [${Object.keys(gameMap).slice(0, 5).join(", ")}]`,
-      );
     }
 
     // ==========================================
-    // ✅ FIX: FETCH STATS FOR CURRENT SEASON ONLY
+    // FETCH STATS FOR CURRENT SEASON ONLY
     // ==========================================
     const statsRes = await pool.query(
       `
-  SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
-         bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date
-  FROM box_scores bs
-  JOIN games g ON bs.game_id = g.game_id 
-  WHERE bs.player_id = ANY($1) 
-    AND g.season_code = $2
-    AND g.date <= CURRENT_DATE 
-    AND bs.minutes IS NOT NULL 
-    AND bs.minutes != 'DNP' 
-  ORDER BY bs.player_id, g.date DESC
-`,
+      SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+             bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date
+      FROM box_scores bs
+      JOIN games g ON bs.game_id = g.game_id 
+      WHERE bs.player_id = ANY($1) 
+        AND g.season_code = $2
+        AND g.date <= CURRENT_DATE 
+        AND bs.minutes IS NOT NULL 
+        AND bs.minutes != 'DNP' 
+      ORDER BY bs.player_id, g.date DESC
+    `,
       [playerIdsArr, currentSeason],
     );
 
@@ -1186,17 +1290,10 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       statsMap[r.player_id].push(r);
     });
 
-    // ✅ DEBUG: Verify season filtering
-    const samplePlayerId = playerIdsArr[0];
-    const sampleGames = statsMap[samplePlayerId] || [];
-    console.log(
-      `✅ [ROUTE 10] Season: ${currentSeason}, Sample player ${samplePlayerId} has ${sampleGames.length} games this season`,
-    );
-
     // ==========================================
-    // BULK FETCH H2H DATA
+    // BULK FETCH H2H DATA (Cross-season)
     // ==========================================
-    const opponentMap = {};
+    const opponentMap = {}; // player_id -> opponent_team_id
     for (const pid of playerIdsArr) {
       const tid = teamMap[pid];
       const nextGame = gameMap[tid];
@@ -1208,29 +1305,25 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
 
     const opponentIdsSet = new Set(Object.values(opponentMap));
     const opponentIdsArr = Array.from(opponentIdsSet);
-    let h2hMap = {};
+    let h2hMap = {}; // player_id -> [games]
 
     if (opponentIdsArr.length > 0) {
-      // ==========================================
-      // ✅ FIX: FETCH H2H FOR CURRENT SEASON ONLY
-      // ==========================================
       const h2hRes = await pool.query(
         `
-  SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
-         bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date,
-         g.team_id_a, g.team_id_b, bs.team_id as bs_team_id
-  FROM box_scores bs
-  JOIN games g ON bs.game_id = g.game_id 
-  WHERE bs.player_id = ANY($1) 
-    AND (g.team_id_a = ANY($2) OR g.team_id_b = ANY($2))
-    AND g.date <= CURRENT_DATE
-    AND bs.minutes != 'DNP'
-  ORDER BY bs.player_id, g.date DESC
-`,
-        [playerIdsArr, opponentIdsArr], // ✅ Removed currentSeason param
+        SELECT bs.player_id, bs.points, bs.assists, bs.total_rebounds, 
+               bs.three_points_made, bs.steals, bs.blocks_favour, bs.minutes, g.date,
+               g.team_id_a, g.team_id_b, bs.team_id as bs_team_id
+        FROM box_scores bs
+        JOIN games g ON bs.game_id = g.game_id 
+        WHERE bs.player_id = ANY($1) 
+          AND (g.team_id_a = ANY($2) OR g.team_id_b = ANY($2))
+          AND g.date <= CURRENT_DATE
+          AND bs.minutes != 'DNP'
+        ORDER BY bs.player_id, g.date DESC
+      `,
+        [playerIdsArr, opponentIdsArr],
       );
 
-      // Filter to ensure it's against the SPECIFIC opponent for that player
       h2hRes.rows.forEach((r) => {
         const oppId = opponentMap[r.player_id];
         if (
@@ -1251,7 +1344,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
 
     for (const match of detailedMatches) {
       const dbPlayer = matchedPlayersMap[match.id];
-      const opponentName = match.away;
+      const opponentName = match.away || match.guest || match.opponent || "";
       const params = match.params || {};
       const odds = match.odds || {};
       const oddsArr = Object.values(odds);
@@ -1263,26 +1356,38 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       let currentTeamName = dbPlayer.team_id;
 
       if (uniquePlayerIds.has(dbPlayer.player_id)) {
-        currentTeamId = teamMap[dbPlayer.player_id] || dbPlayer.team_id;
+        // ✅ FIX: Prioritize players table (updated for current season)
+        // over teamMap (which might be from last season if current stats aren't imported yet)
+        currentTeamId = dbPlayer.team_id || teamMap[dbPlayer.player_id];
+        currentTeamName = TEAM_ID_TO_NAME[currentTeamId] || currentTeamId;
 
         const nextGame = gameMap[currentTeamId];
 
-        if (!nextGame) {
-          console.log(
-            `⚠️ [DEBUG] NO NEXT GAME for ${dbPlayer.player_name} (${dbPlayer.player_id}). Team: ${currentTeamId}. Is team in gameMap? ${!!gameMap[currentTeamId]}`,
-          );
-        }
-
         if (nextGame) {
+          // Found an upcoming game in the DB
           realGameId = nextGame.game_id;
           if (nextGame.team_id_a === currentTeamId) {
             realOpponentId = nextGame.team_id_b;
-            realOpponentName = nextGame.team_b || nextGame.team_id_b;
-            currentTeamName = nextGame.team_a || nextGame.team_id_a;
+            realOpponentName =
+              TEAM_ID_TO_NAME[nextGame.team_id_b] ||
+              nextGame.team_b ||
+              nextGame.team_id_b;
           } else {
             realOpponentId = nextGame.team_id_a;
-            realOpponentName = nextGame.team_a || nextGame.team_id_a;
-            currentTeamName = nextGame.team_b || nextGame.team_id_b;
+            realOpponentName =
+              TEAM_ID_TO_NAME[nextGame.team_id_a] ||
+              nextGame.team_a ||
+              nextGame.team_id_a;
+          }
+        } else {
+          // No upcoming game in DB — use static mapping from BrazilBet name
+          const matchedOppId = resolveOpponentTeam(opponentName, currentTeamId);
+          if (matchedOppId) {
+            realOpponentId = matchedOppId;
+            realOpponentName = TEAM_ID_TO_NAME[matchedOppId] || opponentName;
+          } else {
+            realOpponentId = "TBD";
+            realOpponentName = opponentName || match.away || "Unknown";
           }
         }
       }
@@ -1461,7 +1566,9 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
           game_id: realGameId,
           start_time: new Date(match.kickOffTime).toISOString(),
           player_id: dbPlayer.player_id,
-          player: dbPlayer.player_name || match.home,
+          player: (dbPlayer.player_name || match.home || "")
+            .replace(/\s+/g, " ")
+            .trim(),
           team_id: currentTeamId,
           team: currentTeamName,
           opponent_team_id: realOpponentId,

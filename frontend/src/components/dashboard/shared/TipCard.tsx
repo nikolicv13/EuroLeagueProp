@@ -266,7 +266,7 @@ export default function TipCard({ tip, dateLabel, onGameReport }: Props) {
                 ? `E${now.getFullYear()}`
                 : `E${now.getFullYear() - 1}`;
             };
-            const path = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over"}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=${getCurrentSeason()}&leagueId=571881`;
+            const path = `/player-stats/${tip.player_id}?propType=${tip.market}&propAmount=${tip.line}&overUnder=${tip.selection || "over+ "}&oppTeam=${oppTeamId}&oppName=${encodeURIComponent(oppName)}&teamId=${teamId}&position=${pos}&season=${getCurrentSeason()}&leagueId=571881&playerName=${encodeURIComponent(tip.player)}`;
             window.open(path, "_blank", "noopener,noreferrer");
           }}
         >
