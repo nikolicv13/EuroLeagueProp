@@ -11,7 +11,7 @@ import TypsDashboard from "./components/dashboard/TipsDashboard";
 import PlayerSearchPage from "./components/player/PlayerSearchPage";
 import AccountPage from "./pages/AccountPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import DefenseRankingsPage from "./components/defense/DefenseRankingsPage";
 export default function App() {
   return (
     <AuthProvider>
@@ -24,6 +24,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<TypsDashboard />} />
           <Route path="/players" element={<PlayerSearchPage />} />
+          <Route path="/defense" element={<DefenseRankingsPage />} />
           <Route
             path="/account"
             element={

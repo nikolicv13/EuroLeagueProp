@@ -10,7 +10,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, loading } = useAuth();
 
-  // Scroll-hide behavior (your existing code)
+  // Scroll-hide behavior
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -80,6 +80,17 @@ export default function Header() {
               }
             >
               Player Search
+            </NavLink>
+            {/* ✅ ADDED DESKTOP LINK */}
+            <NavLink
+              to="/defense"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles.navLink} ${styles.navLinkActive}`
+                  : styles.navLink
+              }
+            >
+              Defense Rankings
             </NavLink>
             <NavLink
               to="/parlay-builder"
@@ -198,6 +209,18 @@ export default function Header() {
           }
         >
           Player Search
+        </NavLink>
+        {/* ✅ ADDED MOBILE LINK */}
+        <NavLink
+          to="/defense"
+          onClick={closeMenu}
+          className={({ isActive }) =>
+            `${styles.mobileNavLink} ${
+              isActive ? styles.mobileNavLinkActive : ""
+            }`
+          }
+        >
+          Defense Rankings
         </NavLink>
         <NavLink
           to="/parlay-builder"

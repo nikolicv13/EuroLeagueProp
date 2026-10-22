@@ -238,3 +238,20 @@ export interface CustomTooltipProps {
   marketKeyStr: string;
   marketLabelStr: string;
 }
+
+export interface DefenseTableRow {
+  team_id: string;
+  team_name: string;
+  avg_points: number;
+  avg_rebounds: number;
+  avg_assists: number;
+  avg_threes: number;
+  avg_steals: number;
+  avg_blocks: number;
+  rank_avg_points: number;
+  rank_avg_rebounds: number;
+  rank_avg_assists: number;
+  rank_avg_threes: number;
+  rank_avg_steals: number;
+  rank_avg_blocks: number;
+}

@@ -1,0 +1,97 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  color: #000000;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 32px;
+  font-size: 1.8rem;
+}
+
+.toggleRow,
+.positionRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.active,
+.posActive {
+  background: #e94560;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inactive,
+.posInactive {
+  background: #2a2a3a;
+  color: #888;
+  border: 1px solid #444;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 2px solid #333;
+  color: #888;
+}
+
+.sortable {
+  cursor: pointer;
+}
+
+.sortable:hover {
+  color: #e94560;
+}
+
+.table td {
+  padding: 10px;
+  border-bottom: 1px solid #222;
+  font-weight: 600;
+}
+
+.rankCell {
+  color: #888;
+  font-size: 12px;
+}
+
+.teamCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.microRank {
+  font-size: 10px;
+  color: #555;
+  margin-left: 4px;
+}

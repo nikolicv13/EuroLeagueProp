@@ -90,6 +90,45 @@ function getMarketValue(game, market) {
       return 0;
   }
 }
+function getMarketAvgValue(avgs, market) {
+  if (!avgs) return 0;
+  const pts = parseFloat(avgs.points_per_game) || 0;
+  const reb = parseFloat(avgs.total_rebounds_per_game) || 0;
+  const ast = parseFloat(avgs.assists_per_game) || 0;
+  const stl = parseFloat(avgs.steals_per_game) || 0;
+  const blk = parseFloat(avgs.blocks_favour_per_game) || 0;
+  const threes = parseFloat(avgs.three_points_made_per_game) || 0;
+
+  switch (market) {
+    case "points":
+    case "points_alt":
+    case "points_alt2":
+      return pts;
+    case "rebounds":
+    case "rebounds_alt":
+    case "rebounds_alt2":
+      return reb;
+    case "assists":
+    case "assists_alt":
+      return ast;
+    case "threes_made":
+      return threes;
+    case "steals":
+      return stl;
+    case "blocks":
+      return blk;
+    case "pa":
+      return pts + ast;
+    case "pr":
+      return pts + reb;
+    case "ra":
+      return reb + ast;
+    case "pra":
+      return pts + reb + ast;
+    default:
+      return 0;
+  }
+}
 
 // ==========================================
 // AUTH: Get current user profile
@@ -218,6 +257,13 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
   try {
     const userTier = req.userTier || "pro"; // default to pro if not logged in (off-season)
     const playerId = req.params.id;
+    if (/^\d+$/.test(playerId)) {
+      const altCheck = await pool.query(
+        "SELECT 1 FROM players WHERE player_id = $1 LIMIT 1",
+        [`P${playerId}`],
+      );
+      if (altCheck.rowCount > 0) playerId = `P${playerId}`;
+    }
     // Ensure limit is a number, default to 10
     const limitParam = req.query.limit;
     const limit = limitParam !== undefined ? parseInt(limitParam, 10) : 50;
@@ -228,7 +274,6 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
     const withTeammateId = req.query.withTeammate;
     const withoutTeammateId = req.query.withoutTeammate;
 
-    const currentDate = gameDate || new Date().toISOString().split("T")[0];
     if (userTier === "free") {
       // Remove these filters — they're pro-only
       if (withTeammateId || withoutTeammateId || opposingPlayerId) {
@@ -272,15 +317,15 @@ app.get("/api/players/:id/stats", optionalAuth, async (req, res) => {
         bs.fouls_received,
         bs.plus_minus,
         bs.valuation as pir
-      FROM box_scores bs
+       FROM box_scores bs
       JOIN games g ON bs.game_id = g.game_id
       WHERE bs.player_id = $1 
-        AND g.date <= $2
+        AND g.score_quarter_1_a IS NOT NULL
         AND bs.minutes != 'DNP'
     `;
 
-    let params = [playerId, currentDate];
-    let paramIndex = 3; // 3 because $1 and $2 are already used above
+    let params = [playerId];
+    let paramIndex = 2; // ✅ Changed to 2 because we removed the $2 date parameter
 
     if (withTeammateId) {
       query += ` AND EXISTS (
@@ -1071,7 +1116,8 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       const normalize = (str) =>
         str
           .toLowerCase()
-          .replace(/'/g, "") // ✅ FIX: Remove apostrophes entirely (O'SHAE -> OSHAE)
+          .replace(/'/g, "") // Remove apostrophes entirely (O'SHAE -> OSHAE)
+          .replace(/\./g, "") // ✅ FIX: Remove periods entirely (A.J. -> AJ)
           .replace(/[^a-z0-9\s]/g, " ") // replace other punctuation with space
           .replace(/\s+/g, " ") // collapse multiple spaces
           .trim();
@@ -1153,8 +1199,9 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
       Milano: "MIL",
       Dubai: "DUB",
       Valencia: "PAM",
-      "Maccabi Tel Aviv": "HTA",
-      Maccabi: "HTA",
+      "Maccabi Tel Aviv": "TEL",
+      Maccabi: "TEL",
+      Hapoel: "HTA",
       "Real Madrid": "MAD",
       Madrid: "MAD",
       "Lyon-Villeurbanne": "ASV",
@@ -1336,6 +1383,76 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         }
       });
     }
+    // ==========================================
+    // ✅ FETCH INJURIES FROM DB
+    // ==========================================
+    const injuriesRes = await pool.query(
+      `SELECT matched_player_id, team_id_el, position, injury_type, status 
+       FROM injuries 
+       WHERE status = 'OUT' AND matched_player_id IS NOT NULL`,
+    );
+
+    const injuriesByTeam = {};
+    injuriesRes.rows.forEach((inj) => {
+      if (!injuriesByTeam[inj.team_id_el]) injuriesByTeam[inj.team_id_el] = [];
+      injuriesByTeam[inj.team_id_el].push(inj);
+    });
+
+    // Helper: Normalize positions into groups (handles both Euroleague PG/SG and RotoWire G/F/C)
+    const getPositionGroup = (pos) => {
+      if (!pos) return "Other";
+      const upper = pos.toUpperCase();
+      if (["PG", "SG", "G"].includes(upper)) return "Guard";
+      if (["SF", "PF", "F"].includes(upper)) return "Forward";
+      if (upper === "C") return "Center";
+      return "Other";
+    };
+    // ==========================================
+    // ✅ ALGORITHM V2: FETCH SEASON AVERAGES & DvP
+    // ==========================================
+    // 1. Get season averages for projection math
+    const seasonAvgRes = await pool.query(
+      `SELECT player_id, points_per_game, assists_per_game, total_rebounds_per_game, 
+              three_points_made_per_game, steals_per_game, blocks_favour_per_game
+       FROM player_season_stats 
+       WHERE player_id = ANY($1) AND season_code = $2`,
+      [playerIdsArr, currentSeason],
+    );
+    const seasonAvgMap = {};
+    seasonAvgRes.rows.forEach((r) => (seasonAvgMap[r.player_id] = r));
+
+    // 2. Get Defense vs Position for matchup multiplier
+    const dvpRes = await pool.query(
+      `SELECT team_id, position, avg_points, avg_rebounds, avg_assists, 
+              points_rank, rebounds_rank, assists_rank, total_teams_in_position
+       FROM defense_rankings`,
+    );
+    const dvpMap = {};
+    dvpRes.rows.forEach((r) => {
+      if (!dvpMap[r.team_id]) dvpMap[r.team_id] = {};
+      dvpMap[r.team_id][r.position] = r;
+    });
+
+    // Helper to get market value from a game (for projection averages)
+    const getMarketAvg = (gameList, market) => {
+      if (!gameList || gameList.length === 0) return 0;
+      const total = gameList.reduce(
+        (sum, g) => sum + getMarketValue(g, market),
+        0,
+      );
+      return total / gameList.length;
+    };
+
+    // Helper to calculate Standard Deviation (Variance)
+    const calcStdDev = (gameList, market, mean) => {
+      if (!gameList || gameList.length < 2) return 5; // Default STD if not enough data
+      const squaredDiffs = gameList.map((g) =>
+        Math.pow(getMarketValue(g, market) - mean, 2),
+      );
+      const variance =
+        squaredDiffs.reduce((a, b) => a + b, 0) / (gameList.length - 1);
+      return Math.sqrt(variance);
+    };
 
     // ==========================================
     // BUILD TIPS (100% In-Memory, 0 DB Queries)
@@ -1389,6 +1506,34 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
             realOpponentId = "TBD";
             realOpponentName = opponentName || match.away || "Unknown";
           }
+        }
+      }
+      // ==========================================
+      // ✅ CHECK FOR INJURED TEAMMATES (FROM DB)
+      // ==========================================
+      let injuryBoost = 0;
+      let injuredTeammates = [];
+
+      if (currentTeamId && currentTeamId !== "TBD") {
+        const teamInjuries = injuriesByTeam[currentTeamId] || [];
+        const playerPosGroup = getPositionGroup(dbPlayer.position);
+
+        for (const inj of teamInjuries) {
+          const injPosGroup = getPositionGroup(inj.position);
+
+          // Match if they share the same position group
+          if (injPosGroup === playerPosGroup && playerPosGroup !== "Other") {
+            injuredTeammates.push(inj);
+          }
+        }
+
+        if (injuredTeammates.length > 0) {
+          // +15 score points per injured same-position starter, cap at 30
+          injuryBoost = Math.min(injuredTeammates.length * 15, 30);
+
+          console.log(
+            `🏥 [INJURY] ${dbPlayer.player_name} (${currentTeamId}) boosted +${injuryBoost} | Injured: ${injuredTeammates.map((i) => i.matched_player_id).join(", ")}`,
+          );
         }
       }
 
@@ -1509,47 +1654,102 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
         const games = statsMap[dbPlayer.player_id] || [];
 
         if (games.length > 0) {
-          // Determine master selection based on L10
-          let l10Over = 0,
-            l10Under = 0,
-            l10Attempts = 0;
-          const last10 = games.slice(0, 10);
-          for (const g of last10) {
-            const val = getMarketValue(g, config.market);
-            l10Attempts++;
-            if (val > line) l10Over++;
-            else if (val < line) l10Under++;
-          }
-
-          finalSelection =
-            l10Attempts > 0 ? (l10Over >= l10Under ? "over" : "under") : "over";
-
-          // Calculate hit rates STRICTLY for the locked-in finalSelection
-          const calcRate = (list) => {
+          // ==========================================
+          // 1. CALCULATE HIT RATES (For Frontend UI)
+          // ==========================================
+          const calcRateForSelection = (list, sel) => {
             let hits = 0,
               attempts = 0;
             for (const g of list) {
               const val = getMarketValue(g, config.market);
               attempts++;
-              if (finalSelection === "over" && val > line) hits++;
-              if (finalSelection === "under" && val < line) hits++;
+              if (sel === "over" && val > line) hits++;
+              if (sel === "under" && val < line) hits++;
             }
             return {
-              sel: finalSelection,
+              sel,
               rate: attempts > 0 ? hits / attempts : 0,
               hits,
               attempts,
             };
           };
 
-          // ✅ FIX: "season" now correctly maps to ALL games fetched for the current season
-          const sA = calcRate(games);
-          const l5A = calcRate(games.slice(0, 5));
-          const l10A = calcRate(games.slice(0, 10));
-          const l15A = calcRate(games.slice(0, 15));
+          // ==========================================
+          // 2. ALGORITHM V2: PROJECTIONS & EDGE
+          // ==========================================
+          const seasonAvgs = seasonAvgMap[dbPlayer.player_id];
 
+          // ✅ FIX: Use the proper per-game helper for season averages
+          const seasonMean = getMarketAvgValue(seasonAvgs, config.market);
+
+          const l10Mean = getMarketAvg(games.slice(0, 10), config.market);
           const h2hGames = h2hMap[dbPlayer.player_id] || [];
-          const vsOppA = calcRate(h2hGames);
+          const h2hMean = getMarketAvg(h2hGames, config.market);
+
+          // A. Blended Projection
+          let projection = seasonMean * 0.5 + l10Mean * 0.5;
+          if (h2hGames.length >= 2) {
+            projection = seasonMean * 0.3 + l10Mean * 0.4 + h2hMean * 0.3;
+          }
+
+          // B. Matchup Multiplier (DvP)
+          const posGroup = getPositionGroup(dbPlayer.position);
+          const oppDvP = dvpMap[realOpponentId]?.[posGroup];
+
+          if (oppDvP) {
+            const rankPct =
+              (oppDvP.points_rank || 9) /
+              (oppDvP.total_teams_in_position || 18);
+            if (rankPct >= 0.75)
+              projection *= 1.1; // Weak defense
+            else if (rankPct <= 0.25) projection *= 0.9; // Strong defense
+          }
+
+          // C. Delta (Cushion) & Variance
+          const delta = projection - line;
+          const stdDev =
+            calcStdDev(games.slice(0, 15), config.market, seasonMean) || 4; // Fallback STD
+
+          // D. Determine Selection & Calculate Z-Score correctly
+          let zScore;
+          if (delta >= 0) {
+            finalSelection = "over";
+            zScore = delta / stdDev; // Positive z = high chance of Over
+          } else {
+            finalSelection = "under";
+            zScore = Math.abs(delta) / stdDev; // Positive z = high chance of Under
+          }
+
+          // E. Calculate True Probability
+          // zScore 0 = 50%, zScore 0.5 = ~62.5%, zScore 1.0 = 75%
+          let trueProb = 50 + zScore * 25;
+          trueProb = Math.max(10, Math.min(90, trueProb)); // Cap between 10% and 90%
+
+          // F. Calculate Edge (vs Sportsbook Odds)
+          const currentOdds = finalSelection === "over" ? overOdds : underOdds;
+          const impliedProb = (1 / currentOdds) * 100;
+          const edge = trueProb - impliedProb;
+
+          // G. Convert Edge to Score
+          let baseScore = edge * 5;
+
+          // Sample Size Penalty
+          if (games.length < 5) baseScore *= 0.5;
+          else if (games.length < 10) baseScore *= 0.8;
+
+          baseScore = Math.max(0, baseScore);
+
+          // Add Injury Boost
+          score = Math.round(baseScore) + injuryBoost;
+
+          // ==========================================
+          // 3. FINALIZE HIT RATES FOR UI
+          // ==========================================
+          const sA = calcRateForSelection(games, finalSelection);
+          const l5A = calcRateForSelection(games.slice(0, 5), finalSelection);
+          const l10A = calcRateForSelection(games.slice(0, 10), finalSelection);
+          const l15A = calcRateForSelection(games.slice(0, 15), finalSelection);
+          const vsOppA = calcRateForSelection(h2hGames, finalSelection);
 
           hitRates = {
             season: sA,
@@ -1558,9 +1758,7 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
             last15: l15A,
             vs_opp: vsOppA,
           };
-          score = Math.round(l5A.rate * 40 + l10A.rate * 30 + 30);
         }
-
         tips.push({
           id: `${realGameId}_${dbPlayer.player_id}_${config.market}_${line}`,
           game_id: realGameId,
@@ -1582,6 +1780,13 @@ app.get("/api/odds/brazilbet/:leagueId", optionalAuth, async (req, res) => {
           underOdds: underOdds,
           hit_rates: hitRates,
           score: score,
+          // ✅ INJURY DATA FOR FRONTEND
+          injury_boost: injuryBoost,
+          injured_teammates: injuredTeammates.map((i) => ({
+            player_id: i.matched_player_id,
+            position: i.position,
+            injury: i.injury_type,
+          })),
         });
       }
     }
@@ -1659,6 +1864,128 @@ async function getDailyGame(leagueId) {
 
   return gameId;
 }
+
+// ==========================================
+// ROUTE: Defense vs Position Full Table
+// ==========================================
+app.get("/api/defense-rankings-table", async (req, res) => {
+  try {
+    const view = req.query.view || "detailed"; // detailed | basic
+    const position = req.query.position || "PG";
+
+    const positionMapping = {
+      Guard: ["PG", "SG"],
+      Forward: ["SF", "PF"],
+      Center: ["C"],
+      PG: ["PG"],
+      SG: ["SG"],
+      SF: ["SF"],
+      PF: ["PF"],
+      C: ["C"],
+    };
+
+    const positionsToFetch = positionMapping[position] || [position];
+
+    // 1. Fetch all relevant rows from the Materialized View
+    const result = await pool.query(
+      `SELECT team_id, position, avg_points, avg_rebounds, avg_assists, avg_threes, avg_steals, avg_blocks
+       FROM defense_rankings 
+       WHERE position = ANY($1)`,
+      [positionsToFetch],
+    );
+
+    if (result.rows.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Team Name Map
+    const TEAM_NAMES = {
+      FEN: "Fenerbahce",
+      PAR: "Partizan",
+      MIL: "Milan",
+      DUB: "Dubai",
+      PAM: "Valencia",
+      HTA: "Hapoel",
+      TEL: "Maccabi",
+      MAD: "Real Madrid",
+      ASV: "ASVEL",
+      BAS: "Baskonia",
+      BAR: "Barcelona",
+      MUN: "Bayern",
+      OLY: "Olympiacos",
+      PAO: "Panathinaikos",
+      ZAL: "Zalgiris",
+      VIL: "Virtus",
+      RED: "Crvena Zvezda",
+      IST: "Efes",
+      PRS: "Paris",
+      MON: "Monaco",
+      ULK: "Fenerbahce",
+    };
+
+    // 3. Aggregate by team_id (average the positions for Basic view)
+    const teamMap = {};
+    for (const row of result.rows) {
+      if (!teamMap[row.team_id]) {
+        teamMap[row.team_id] = {
+          team_id: row.team_id,
+          team_name: TEAM_NAMES[row.team_id] || row.team_id,
+          count: 0,
+          avg_points: 0,
+          avg_rebounds: 0,
+          avg_assists: 0,
+          avg_threes: 0,
+          avg_steals: 0,
+          avg_blocks: 0,
+        };
+      }
+      const t = teamMap[row.team_id];
+      t.avg_points += parseFloat(row.avg_points) || 0;
+      t.avg_rebounds += parseFloat(row.avg_rebounds) || 0;
+      t.avg_assists += parseFloat(row.avg_assists) || 0;
+      t.avg_threes += parseFloat(row.avg_threes) || 0;
+      t.avg_steals += parseFloat(row.avg_steals) || 0;
+      t.avg_blocks += parseFloat(row.avg_blocks) || 0;
+      t.count++;
+    }
+
+    // Calculate final averages
+    const teams = Object.values(teamMap).map((t) => {
+      if (t.count > 0) {
+        t.avg_points = t.avg_points / t.count;
+        t.avg_rebounds = t.avg_rebounds / t.count;
+        t.avg_assists = t.avg_assists / t.count;
+        t.avg_threes = t.avg_threes / t.count;
+        t.avg_steals = t.avg_steals / t.count;
+        t.avg_blocks = t.avg_blocks / t.count;
+      }
+      return t;
+    });
+
+    // 4. Assign Ranks (Higher avg = worse defense = higher rank number)
+    const assignRank = (arr, key) => {
+      arr.sort((a, b) => b[key] - a[key]); // Descending
+      arr.forEach((item, i) => {
+        item[`rank_${key}`] = i + 1;
+      });
+    };
+
+    assignRank(teams, "avg_points");
+    assignRank(teams, "avg_rebounds");
+    assignRank(teams, "avg_assists");
+    assignRank(teams, "avg_threes");
+    assignRank(teams, "avg_steals");
+    assignRank(teams, "avg_blocks");
+
+    // 5. Default sort: Worst points defense first
+    teams.sort((a, b) => b.avg_points - a.avg_points);
+
+    res.json(teams);
+  } catch (error) {
+    console.error("Defense table error:", error);
+    res.status(500).json({ error: "Failed to fetch defense table" });
+  }
+});
 
 // ==========================================
 // START THE SERVER

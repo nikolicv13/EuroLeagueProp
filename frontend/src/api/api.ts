@@ -5,6 +5,7 @@ import type {
   PlayerGameStat,
   DefenseRankings,
   SimilarPlayer,
+  DefenseTableRow,
 } from "./types";
 
 const API_URL =
@@ -215,5 +216,16 @@ export async function changePassword(
     const err = await res.json();
     throw new Error(err.error || "Failed to change password");
   }
+  return res.json();
+}
+
+export async function fetchDefenseTable(
+  view: string,
+  position: string,
+): Promise<DefenseTableRow[]> {
+  const res = await fetch(
+    `${API_URL}/defense-rankings-table?view=${view}&position=${position}`,
+  );
+  if (!res.ok) throw new Error("Failed to fetch defense table");
   return res.json();
 }

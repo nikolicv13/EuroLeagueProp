@@ -135,7 +135,7 @@ export default function GamePropsSidebar({
               onError={(e) => (e.currentTarget.src = "/logos/placeholder.png")}
             />
             <div className={styles.teamAbbr}>
-              {currentGame.team_abbr || currentGame.team}
+              {currentGame.team || currentGame.team_abbr || currentGame.team_id}
             </div>
           </div>
 
@@ -156,7 +156,9 @@ export default function GamePropsSidebar({
               onError={(e) => (e.currentTarget.src = "/logos/placeholder.png")}
             />
             <div className={styles.teamAbbr}>
-              {currentGame.opponent_abbr || currentGame.opponent}
+              {currentGame.opponent ||
+                currentGame.opponent_abbr ||
+                currentGame.opponent_team_id}
             </div>
           </div>
         </div>

@@ -96,8 +96,9 @@ export default function PlayerStats() {
     "all" | "regular" | "playoffs"
   >("all");
   const [logPage, setLogPage] = useState(1);
-  const [selectedSeason, setSelectedSeason] =
-    useState<string>(getCurrentSeason());
+  const [selectedSeason, setSelectedSeason] = useState<string>(
+    tip.season || getCurrentSeason(),
+  );
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([
     "euroleague",
   ]);
@@ -449,6 +450,11 @@ export default function PlayerStats() {
   };
 
   // --- EFFECTS ---
+  useEffect(() => {
+    if (tip.season && tip.season !== selectedSeason) {
+      setSelectedSeason(tip.season); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [tip.season, selectedSeason]);
   useEffect(() => {
     if (!tip.player_id) return;
     (async () => {
